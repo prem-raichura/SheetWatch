@@ -1,0 +1,267 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Accent — the only value the appearance picker writes. Everything else derives. */
+  --accent-base: #0fa3a3;
+
+  --primary: oklch(from var(--accent-base) l c h);
+  --primary-strong: oklch(from var(--accent-base) calc(l - 0.07) c h);
+  --primary-foreground: oklch(1 0 0);
+  --primary-soft: color-mix(in oklab, var(--primary) 11%, var(--card));
+  --ring: color-mix(in oklab, var(--primary) 40%, transparent);
+
+  /* Surfaces + text (light) */
+  --background: oklch(0.976 0.003 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.235 0.026 268);
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
+  --foreground: var(--card-foreground);
+  --border: oklch(0.925 0.007 264);
+  --input: var(--border);
+  --secondary: oklch(0.955 0.004 260);
+  --secondary-foreground: oklch(0.35 0.024 266);
+  --muted: oklch(0.955 0.004 260);
+  --muted-foreground: oklch(0.51 0.02 264);
+  --accent: color-mix(in oklab, var(--primary) 8%, var(--card));
+  --accent-foreground: var(--foreground);
+
+  /* Text ramp (legacy ink bridge targets) */
+  --text-strong: oklch(0.235 0.026 268);
+  --text-secondary: oklch(0.35 0.024 266);
+  --text-muted: oklch(0.51 0.02 264);
+  --text-faint: oklch(0.66 0.014 262);
+
+  /* Status */
+  --destructive: oklch(0.645 0.185 33);
+  --destructive-strong: oklch(0.575 0.18 33);
+  --destructive-soft: color-mix(in oklab, var(--destructive) 10%, var(--card));
+  --destructive-foreground: oklch(1 0 0);
+  --success: var(--primary);
+  --warning: oklch(0.75 0.15 80);
+
+  /* Charts */
+  --chart-1: var(--primary);
+  --chart-2: oklch(0.62 0.14 260);
+  --chart-3: oklch(0.7 0.13 80);
+  --chart-4: oklch(0.6 0.16 320);
+  --chart-5: oklch(0.65 0.12 150);
+
+  --radius: 0.75rem;
+  --shadow-card-value: 0 1px 2px rgb(20 26 42 / 0.04), 0 1px 12px rgb(20 26 42 / 0.04);
+  --shadow-pop-value: 0 8px 30px rgb(20 26 42 / 0.12);
+}
+
+.dark {
+  /* Accent lightened for dark surfaces; clamp keeps very light accents usable. */
+  --primary: oklch(from var(--accent-base) calc(min(l + 0.1, 0.82)) calc(c * 0.9) h);
+  --primary-strong: oklch(from var(--accent-base) calc(min(l + 0.17, 0.88)) calc(c * 0.85) h);
+  --primary-foreground: oklch(0.15 0.02 265);
+  --background: oklch(0.17 0.018 268);
+  --card: oklch(0.215 0.02 268);
+  --card-foreground: oklch(0.93 0.008 262);
+  --foreground: var(--card-foreground);
+  --border: oklch(0.3 0.02 266);
+  --input: var(--border);
+  --secondary: oklch(0.27 0.02 267);
+  --secondary-foreground: oklch(0.8 0.012 262);
+  --muted: oklch(0.27 0.02 267);
+  --muted-foreground: oklch(0.68 0.014 262);
+  --accent: color-mix(in oklab, var(--primary) 14%, var(--card));
+  --text-strong: oklch(0.93 0.008 262);
+  --text-secondary: oklch(0.8 0.012 262);
+  --text-muted: oklch(0.68 0.014 262);
+  --text-faint: oklch(0.52 0.014 262);
+  --destructive: oklch(0.7 0.17 33);
+  --destructive-strong: oklch(0.78 0.15 33);
+  --destructive-soft: color-mix(in oklab, var(--destructive) 16%, var(--card));
+  --shadow-card-value: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 12px rgb(0 0 0 / 0.25);
+  --shadow-pop-value: 0 8px 30px rgb(0 0 0 / 0.5);
+}
+
+/* Density: Tailwind v4 derives every spacing utility from --spacing. */
+:root,
+[data-density="comfortable"] {
+  --spacing: 0.25rem;
+}
+[data-density="compact"] {
+  --spacing: 0.215rem;
+}
+
+/* Font scale */
+html {
+  font-size: 100%;
+}
+html[data-fontscale="sm"] {
+  font-size: 93.75%;
+}
+html[data-fontscale="lg"] {
+  font-size: 106.25%;
+}
+
+@theme inline {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Semantic set (shadcn) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-strong: var(--destructive-strong);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* LEGACY BRIDGE — keeps the pre-migration components compiling and makes
+     them dark-mode + accent aware. Removed at the end of Phase 3. */
+  --color-paper: var(--background);
+  --color-surface: var(--card);
+  --color-line: var(--border);
+  --color-ink-950: var(--text-strong);
+  --color-ink-900: var(--text-strong);
+  --color-ink-800: var(--text-secondary);
+  --color-ink-700: var(--text-secondary);
+  --color-ink-500: var(--text-muted);
+  --color-ink-400: var(--text-faint);
+  --color-ink-300: var(--text-faint);
+  --color-teal: var(--primary);
+  --color-teal-600: var(--primary-strong);
+  --color-teal-soft: var(--primary-soft);
+  --color-coral: var(--destructive);
+  --color-coral-600: var(--destructive-strong);
+  --color-coral-soft: var(--destructive-soft);
+
+  --shadow-card: var(--shadow-card-value);
+  --shadow-pop: var(--shadow-pop-value);
+
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --animate-pulse-ring: pulse-ring 2s ease-out infinite;
+  --animate-fade-up: fade-up 0.35s ease-out both;
+  --animate-fade-in: fade-in 0.15s ease-out both;
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 45%, transparent);
+    }
+    70% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes bell-shake {
+    0%,
+    100% {
+      transform: rotate(0);
+    }
+    20% {
+      transform: rotate(12deg);
+    }
+    40% {
+      transform: rotate(-10deg);
+    }
+    60% {
+      transform: rotate(6deg);
+    }
+    80% {
+      transform: rotate(-4deg);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  /* Consistent keyboard focus ring for all interactive elements.
+     Text inputs keep their own focus styles. */
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible,
+  input[type="checkbox"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+}
+
+/* Theme switch uses a circular clip-path reveal — disable the default
+   view-transition cross-fade so the reveal drives the whole change. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Animation intensity "off" hard-disables everything; "reduced" is handled
+   by MotionConfig. OS-level preference always wins. */
+[data-anim="off"] *,
+[data-anim="off"] *::before,
+[data-anim="off"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
