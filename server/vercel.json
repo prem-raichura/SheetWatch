@@ -1,0 +1,18 @@
+{
+  "buildCommand": "prisma generate && prisma migrate deploy",
+  "installCommand": "npm install",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/poll",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
+  ]
+}
