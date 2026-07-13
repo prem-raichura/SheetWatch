@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  googleId     String    @unique
+  email        String    @unique
+  accessToken  String
+  refreshToken String
+  tokenExpiry  DateTime
+  digest       String    @default("off") // off | daily | weekly
+  digestHour   Int       @default(8)
+  lastDigestAt DateTime?
+  prefs        Json?
+  createdAt    DateTime  @default(now())
+
+  sheets           Sheet[]
+  projects         Project[]
+  pushSubs         PushSubscription[]
+  webhooks         Webhook[]
+  kpiWidgets       KpiWidget[]
+  notificationLogs NotificationLog[]
+  chartWidgets     ChartWidget[]
+  shareLinks       ShareLink[]
+  scheduledReports ScheduledReport[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  color       String   @default("#0FA3A3")
+  sortOrder   Int      @default(0)
+  notifyEmail Boolean  @default(true)
+  notifyPush  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  sheets Sheet[]
+
+  @@index([userId])
+}
+
+model Sheet {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  spreadsheetId String
+  range         String    @default("A1:Z1000")
+  tab           String?
+  watchMode     String    @default("range")
+  matchColumn   String?
+  matchValue    String?
+  label         String
+  pollInterval  Int       @default(180)
+  lastHash      String?
+  lastSnapshot  Json?
+  lastCheckedAt DateTime?
+  notifyEmail   Boolean   @default(true)
+  notifyPush    Boolean   @default(true)
+  paused        Boolean   @default(false)
+  snoozedUntil  DateTime?
+  alertColumns  String[]  @default([])
+  alertRules    Json?
+  errorMessage  String?
+  archivedAt    DateTime? // untracked-but-history-kept; null = actively tracked
+  createdAt     DateTime  @default(now())
+
+  changes      ChangeLog[]
+  webhooks     SheetWebhook[]
+  snapshots    Snapshot[]
+  kpiWidgets   KpiWidget[]
+  chartWidgets ChartWidget[]
+
+  @@unique([userId, spreadsheetId])
+  @@index([projectId])
+}
+
+model ChangeLog {
+  id        String    @id @default(cuid())
+  sheetId   String
+  sheet     Sheet     @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  summary   String
+  details   Json
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([sheetId, createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // slack | discord | generic
+  url       String
+  label     String
+  createdAt DateTime @default(now())
+
+  sheets SheetWebhook[]
+
+  @@index([userId])
+}
+
+model SheetWebhook {
+  sheetId   String
+  sheet     Sheet   @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  webhookId String
+  webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@id([sheetId, webhookId])
+  @@index([webhookId])
+}
+
+model Snapshot {
+  id        String   @id @default(cuid())
+  sheetId   String
+  sheet     Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  hash      String
+  rows      Json
+  createdAt DateTime @default(now())
+
+  @@index([sheetId, createdAt])
+}
+
+model KpiWidget {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sheetId        String
+  sheet          Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  cell           String // A1 ref within the watched range, e.g. "B4"
+  label          String
+  format         String   @default("number") // number | currency | percent
+  sortOrder      Int      @default(0)
+  alertAbove     Float?
+  alertBelow     Float?
+  lastAlertState String   @default("unknown") // above | below | normal | unknown
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ChartWidget {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sheetId     String
+  sheet       Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  label       String
+  type        String   @default("line") // line | bar | area | donut
+  range       String // A1 range within the watched grid, e.g. "A1:C30"
+  xColumn     String? // column letters for the x axis / labels
+  dataColumns String[] @default([])
+  headerRow   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ShareLink {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  kind      String    @default("kpis")
+  title     String?
+  widgetIds String[]  @default([]) // empty = all KPI widgets
+  revokedAt DateTime?
+  viewCount Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model ScheduledReport {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cadence    String    @default("weekly") // daily | weekly
+  dayOfWeek  Int       @default(1) // 0=Sun … 6=Sat (weekly only)
+  hour       Int       @default(8)
+  format     String    @default("pdf") // pdf | csv | both
+  projectId  String?
+  enabled    Boolean   @default(true)
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model NotificationLog {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sheetId      String?
+  changeLogId  String?
+  channel      String // push | email | webhook | telegram
+  target       String // display string: email addr, endpoint host, webhook label, chat id
+  title        String
+  body         String
+  status       String // sent | failed | queued | suppressed
+  error        String?
+  attempts     Int       @default(1)
+  deliverAfter DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status, deliverAfter])
+}
