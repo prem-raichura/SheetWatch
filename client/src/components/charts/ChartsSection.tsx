@@ -1,5 +1,20 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { api } from "@/lib/api";
 import { Sheet } from "@/types";
 import { useToast } from "@/components/Toast";
@@ -10,6 +25,62 @@ import type { ChartWidgetData } from "./ChartCard";
 
 // Recharts stays out of the entry bundle; the card lazy-loads with the section.
 const ChartCard = lazy(() => import("./ChartCard"));
+
+// One draggable chart card. The grip is the only handle so the chart stays
+// interactive and the remove button keeps working.
+function SortableChart({
+  widget: w,
+  onRemove,
+}: {
+  widget: ChartWidgetData;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: w.id,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group rounded-2xl border border-line bg-surface px-5 py-4 shadow-card transition-colors hover:border-ink-300 ${
+        isDragging ? "z-10 opacity-80" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <button
+            aria-label={`Drag ${w.label}`}
+            className="mt-0.5 cursor-grab text-ink-300 opacity-0 transition-opacity hover:text-ink-500 active:cursor-grabbing group-hover:opacity-100"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+          <div className="min-w-0">
+            <div className="truncate font-mono text-[11px] uppercase tracking-wider text-ink-400">
+              {w.label}
+            </div>
+            <div className="truncate font-mono text-[10px] text-ink-300">
+              {w.sheetLabel} · {w.range} · {w.type}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onRemove}
+          aria-label={`Remove ${w.label}`}
+          className="rounded p-0.5 text-ink-300 opacity-0 transition-opacity hover:text-coral-600 group-hover:opacity-100"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="mt-3">
+        <Suspense fallback={<SkeletonChart />}>
+          <ChartCard widget={w} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
 
 // User-defined charts rendered from live sheet ranges.
 export default function ChartsSection() {
@@ -42,6 +113,21 @@ export default function ChartsSection() {
     }
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = widgets.findIndex((w) => w.id === active.id);
+    const to = widgets.findIndex((w) => w.id === over.id);
+    const next = arrayMove(widgets, from, to);
+    setWidgets(next);
+    api.post("/api/charts/reorder", { ids: next.map((w) => w.id) }).catch(() => {
+      toast.error("Couldn’t save the new order");
+      refetch();
+    });
+  };
+
   if (!loaded) return null;
 
   return (
@@ -61,37 +147,15 @@ export default function ChartsSection() {
           turn any sheet range into a live line, bar, area or donut chart
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {widgets.map((w) => (
-            <div
-              key={w.id}
-              className="group rounded-2xl border border-line bg-surface px-5 py-4 shadow-card transition-colors hover:border-ink-300"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate font-mono text-[11px] uppercase tracking-wider text-ink-400">
-                    {w.label}
-                  </div>
-                  <div className="truncate font-mono text-[10px] text-ink-300">
-                    {w.sheetLabel} · {w.range} · {w.type}
-                  </div>
-                </div>
-                <button
-                  onClick={() => remove(w)}
-                  aria-label={`Remove ${w.label}`}
-                  className="rounded p-0.5 text-ink-300 opacity-0 transition-opacity hover:text-coral-600 group-hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <div className="mt-3">
-                <Suspense fallback={<SkeletonChart />}>
-                  <ChartCard widget={w} />
-                </Suspense>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {widgets.map((w) => (
+                <SortableChart key={w.id} widget={w} onRemove={() => remove(w)} />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {adding && <AddChartModal onClose={() => setAdding(false)} onAdded={refetch} />}

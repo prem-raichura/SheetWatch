@@ -141,6 +141,28 @@ router.post("/:id/bulk", requireAuth, async (req, res) => {
   res.json({ affected: active.length });
 });
 
+router.post("/reorder", requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const { ids } = req.body as { ids?: unknown };
+  if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === "string")) {
+    res.status(400).json({ error: "ids must be a non-empty array of project ids" });
+    return;
+  }
+  const owned = await prisma.project.findMany({
+    where: { userId, id: { in: ids } },
+    select: { id: true },
+  });
+  const ownedIds = new Set(owned.map((p) => p.id));
+  if (!ids.every((id) => ownedIds.has(id))) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  await prisma.$transaction(
+    ids.map((id, i) => prisma.project.update({ where: { id, userId }, data: { sortOrder: i } }))
+  );
+  res.json({ ok: true });
+});
+
 router.delete("/:id", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
   try {

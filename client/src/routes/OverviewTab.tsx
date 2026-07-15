@@ -1,6 +1,21 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Check, Eye, EyeOff, GripVertical, LayoutGrid } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useOverview } from "../hooks/useOverview";
 import { useChanges } from "../hooks/useChanges";
 import { usePrefs } from "../providers/PrefsProvider";
@@ -122,14 +137,14 @@ export default function OverviewTab() {
   const hidden = new Set(prefs.dashboard.hiddenSections);
   const titleOf = (id: string) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.title ?? id;
 
-  const move = (id: string, dir: -1 | 1) => {
-    const idx = order.indexOf(id);
-    const to = idx + dir;
-    if (to < 0 || to >= order.length) return;
-    const next = [...order];
-    next.splice(idx, 1);
-    next.splice(to, 0, id);
-    update({ dashboard: { sectionOrder: next } });
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = order.indexOf(active.id as string);
+    const to = order.indexOf(over.id as string);
+    update({ dashboard: { sectionOrder: arrayMove(order, from, to) } });
   };
 
   const toggleHidden = (id: string) =>
@@ -166,51 +181,80 @@ export default function OverviewTab() {
         </button>
       </div>
 
-      {order.map((id) => {
-        const node = sections[id];
-        if (!node) return null;
-        if (!editing && hidden.has(id)) return null;
-        if (!editing) return <div key={id}>{node}</div>;
-        return (
-          <div
-            key={id}
-            className={`relative rounded-2xl border border-dashed p-3 transition-colors ${
-              hidden.has(id) ? "border-line opacity-45" : "border-teal/40"
-            }`}
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-ink-300" />
-              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-500">
-                {titleOf(id)}
-              </span>
-              <div className="ml-auto flex items-center gap-1">
-                <button
-                  onClick={() => move(id, -1)}
-                  aria-label={`Move ${titleOf(id)} up`}
-                  className="rounded-md border border-line bg-surface px-2 py-1 font-mono text-[11px] text-ink-500 hover:text-ink-900"
-                >
-                  ↑
-                </button>
-                <button
-                  onClick={() => move(id, 1)}
-                  aria-label={`Move ${titleOf(id)} down`}
-                  className="rounded-md border border-line bg-surface px-2 py-1 font-mono text-[11px] text-ink-500 hover:text-ink-900"
-                >
-                  ↓
-                </button>
-                <button
-                  onClick={() => toggleHidden(id)}
-                  aria-label={hidden.has(id) ? `Show ${titleOf(id)}` : `Hide ${titleOf(id)}`}
-                  className="rounded-md border border-line bg-surface p-1.5 text-ink-500 hover:text-ink-900"
-                >
-                  {hidden.has(id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-            </div>
-            <div className="pointer-events-none">{node}</div>
-          </div>
-        );
-      })}
+      {!editing
+        ? order.map((id) => {
+            const node = sections[id];
+            if (!node || hidden.has(id)) return null;
+            return <div key={id}>{node}</div>;
+          })
+        : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={order} strategy={verticalListSortingStrategy}>
+              {order.map((id) =>
+                sections[id] ? (
+                  <SortableSection
+                    key={id}
+                    id={id}
+                    title={titleOf(id)}
+                    hidden={hidden.has(id)}
+                    onToggleHidden={() => toggleHidden(id)}
+                  >
+                    {sections[id]}
+                  </SortableSection>
+                ) : null
+              )}
+            </SortableContext>
+          </DndContext>
+        )}
+    </div>
+  );
+}
+
+// Draggable wrapper shown in Overview's edit-layout mode. The grip is the only
+// drag handle so the eye-toggle button stays clickable.
+function SortableSection({
+  id,
+  title,
+  hidden,
+  onToggleHidden,
+  children,
+}: {
+  id: string;
+  title: string;
+  hidden: boolean;
+  onToggleHidden: () => void;
+  children: ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative rounded-2xl border border-dashed p-3 transition-colors ${
+        isDragging ? "z-10 opacity-80" : ""
+      } ${hidden ? "border-line opacity-45" : "border-teal/40"}`}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          aria-label={`Drag ${title}`}
+          className="cursor-grab text-ink-300 hover:text-ink-500 active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="font-mono text-[11px] uppercase tracking-wider text-ink-500">{title}</span>
+        <button
+          onClick={onToggleHidden}
+          aria-label={hidden ? `Show ${title}` : `Hide ${title}`}
+          className="ml-auto rounded-md border border-line bg-surface p-1.5 text-ink-500 hover:text-ink-900"
+        >
+          {hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+      <div className="pointer-events-none">{children}</div>
     </div>
   );
 }

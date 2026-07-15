@@ -4,6 +4,7 @@ import prisma from "./prisma";
 import { columnToIndex, rangeStartColumn } from "./google/sheets";
 import { parseNumeric } from "./rules";
 import { dispatch, safeHost, type ChannelTarget } from "./notify/dispatch";
+import { publishRealtime } from "./realtime";
 
 // Absolute A1 cell ("B4") → value in the watched grid, which starts at the
 // range's first cell. Returns null when the cell is outside the grid.
@@ -164,6 +165,13 @@ export async function checkKpiThresholds(sheet: Sheet, rows: string[][]): Promis
       sheetId: sheet.id,
       payload,
       targets,
+    });
+
+    void publishRealtime(sheet.userId, {
+      kind: "kpi-alert",
+      sheetId: sheet.id,
+      label: w.label,
+      summary: `${w.label} crossed ${state} ${threshold}`,
     });
   }
 }

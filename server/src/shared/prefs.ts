@@ -27,6 +27,12 @@ export interface UserPrefs {
   };
   time: { hour12: boolean; relative: boolean };
   landingTab: "/overview" | "/sheets" | "/tracking" | "/activity";
+  views: {
+    tracking: "cards" | "list";
+    sheets: "list" | "cards";
+    activity: "timeline" | "table";
+    kpis: "cards" | "strip";
+  };
 }
 
 export const SECTION_IDS = [
@@ -57,6 +63,10 @@ const FONT_SCALES = ["sm", "md", "lg"] as const;
 const ANIMATIONS = ["full", "reduced", "off"] as const;
 const SOUNDS = ["off", "chime", "pop"] as const;
 const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity"] as const;
+const TRACKING_VIEWS = ["cards", "list"] as const;
+const SHEETS_VIEWS = ["list", "cards"] as const;
+const ACTIVITY_VIEWS = ["timeline", "table"] as const;
+const KPI_VIEWS = ["cards", "strip"] as const;
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -85,6 +95,12 @@ export const DEFAULT_PREFS: UserPrefs = {
   },
   time: { hour12: true, relative: true },
   landingTab: "/overview",
+  views: {
+    tracking: "cards",
+    sheets: "list",
+    activity: "timeline",
+    kpis: "cards",
+  },
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -132,6 +148,7 @@ export function mergePrefs(stored: unknown): UserPrefs {
   const nt = isRecord(s.notifications) ? s.notifications : {};
   const qh = isRecord(nt.quietHours) ? nt.quietHours : {};
   const tm = isRecord(s.time) ? s.time : {};
+  const vw = isRecord(s.views) ? s.views : {};
   const d = DEFAULT_PREFS;
 
   return {
@@ -176,6 +193,12 @@ export function mergePrefs(stored: unknown): UserPrefs {
       relative: typeof tm.relative === "boolean" ? tm.relative : d.time.relative,
     },
     landingTab: pickEnum(s.landingTab, LANDING_TABS, d.landingTab),
+    views: {
+      tracking: pickEnum(vw.tracking, TRACKING_VIEWS, d.views.tracking),
+      sheets: pickEnum(vw.sheets, SHEETS_VIEWS, d.views.sheets),
+      activity: pickEnum(vw.activity, ACTIVITY_VIEWS, d.views.activity),
+      kpis: pickEnum(vw.kpis, KPI_VIEWS, d.views.kpis),
+    },
   };
 }
 
@@ -221,6 +244,7 @@ export function applyPrefsPatch(
       quietHours: { ...current.notifications.quietHours },
     },
     time: { ...current.time },
+    views: { ...current.views },
   };
 
   for (const [key, value] of Object.entries(patch)) {
@@ -367,6 +391,33 @@ export function applyPrefsPatch(
         if (!isOneOf(value, LANDING_TABS)) return fail(enumError("landingTab", LANDING_TABS));
         next.landingTab = value;
         break;
+
+      case "views": {
+        if (!isRecord(value)) return fail("views must be an object");
+        for (const [k, v] of Object.entries(value)) {
+          switch (k) {
+            case "tracking":
+              if (!isOneOf(v, TRACKING_VIEWS)) return fail(enumError("views.tracking", TRACKING_VIEWS));
+              next.views.tracking = v;
+              break;
+            case "sheets":
+              if (!isOneOf(v, SHEETS_VIEWS)) return fail(enumError("views.sheets", SHEETS_VIEWS));
+              next.views.sheets = v;
+              break;
+            case "activity":
+              if (!isOneOf(v, ACTIVITY_VIEWS)) return fail(enumError("views.activity", ACTIVITY_VIEWS));
+              next.views.activity = v;
+              break;
+            case "kpis":
+              if (!isOneOf(v, KPI_VIEWS)) return fail(enumError("views.kpis", KPI_VIEWS));
+              next.views.kpis = v;
+              break;
+            default:
+              return fail(`unknown pref key "views.${k}"`);
+          }
+        }
+        break;
+      }
 
       default:
         return fail(`unknown pref key "${key}"`);

@@ -87,11 +87,13 @@ Already populated for local dev (DB, Redis, generated `SESSION_SECRET` / `TOKEN_
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — from Google Cloud setup above.
 - `RESEND_API_KEY` — **optional**; leave empty for push-only. Email notifications and scheduled reports stay disabled until set (or configure SMTP).
 - `TELEGRAM_BOT_TOKEN` — **optional**; create a bot with [@BotFather](https://t.me/botfather) to enable the Telegram channel (add your chat id under Settings → Integrations).
+- `REALTIME_URL` / `REALTIME_SECRET` — **optional**; point at the realtime worker (see below) for instant live updates. Leave empty to stay on 30s polling.
 
 ### `client/.env`
 ```
 VITE_API_BASE_URL=http://localhost:4000
 VITE_VAPID_PUBLIC_KEY=<matches server VAPID_PUBLIC_KEY>
+VITE_REALTIME_URL=ws://localhost:8787   # optional; the server also advertises this
 ```
 
 ---
@@ -102,6 +104,25 @@ VITE_VAPID_PUBLIC_KEY=<matches server VAPID_PUBLIC_KEY>
 - **Email** — disabled by default (push-only). To enable: sign up at [Resend](https://resend.com), verify a sender domain, set `RESEND_API_KEY` + `EMAIL_FROM` in `server/.env`, restart the worker.
 
 Each tracked sheet has independent **Email** / **Push** toggles in the dashboard.
+
+---
+
+## Realtime updates (optional)
+
+Without this the app polls every 30s. With the Cloudflare Worker in `realtime/`, changes appear instantly (live bell, toast, list/KPI refresh) and the header badge reads **live**.
+
+```bash
+cd realtime
+npm install
+echo 'REALTIME_SECRET=devsecret' > .dev.vars
+npx wrangler dev            # ws://localhost:8787
+```
+
+Then set `REALTIME_URL=http://localhost:8787` and `REALTIME_SECRET=devsecret` in `server/.env` and restart the API. The client picks the URL up from the server automatically.
+
+**Deploy:** `npx wrangler deploy`, then `npx wrangler secret put REALTIME_SECRET` (match it in `server/.env`). Set `REALTIME_URL` to the deployed `https://…workers.dev` origin.
+
+How it works: a Durable Object holds every socket (topic `user:<id>`); the API mints a 120s HMAC token at `GET /api/realtime/token` so the browser socket can authenticate, and publishes change/KPI events to the worker's `POST /notify`. Fully optional and isolated — nothing else depends on it.
 
 ---
 

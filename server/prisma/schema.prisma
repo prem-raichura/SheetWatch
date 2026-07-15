@@ -72,6 +72,7 @@ model Sheet {
   alertRules    Json?
   errorMessage  String?
   archivedAt    DateTime? // untracked-but-history-kept; null = actively tracked
+  sortOrder     Int       @default(0)
   createdAt     DateTime  @default(now())
 
   changes      ChangeLog[]
@@ -81,7 +82,7 @@ model Sheet {
   chartWidgets ChartWidget[]
 
   @@unique([userId, spreadsheetId])
-  @@index([projectId])
+  @@index([projectId, sortOrder])
 }
 
 model ChangeLog {

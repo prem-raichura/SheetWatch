@@ -1,0 +1,14 @@
+name = "sheetwatch-realtime"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Secret (set for prod with: npx wrangler secret put REALTIME_SECRET)
+# For local dev create realtime/.dev.vars with: REALTIME_SECRET=devsecret
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]

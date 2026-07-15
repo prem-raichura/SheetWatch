@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, X } from "lucide-react";
+import { GalleryHorizontal, LayoutGrid, Pencil, X } from "lucide-react";
 import { m } from "motion/react";
 import {
   DndContext,
@@ -19,6 +19,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { api } from "../lib/api";
 import { KpiWidget, Sheet } from "../types";
 import { useToast } from "./Toast";
+import { usePrefs } from "../providers/PrefsProvider";
+import ViewToggle from "./ViewToggle";
 import { ModalShell } from "./Modal";
 import Spinner from "./Spinner";
 import NumberTicker from "./magic/NumberTicker";
@@ -161,6 +163,7 @@ function KpiCard({
 // Pinned KPI cells across watched sheets, with 24h delta and sparkline.
 export default function KpiStrip() {
   const toast = useToast();
+  const { prefs, update } = usePrefs();
   const [widgets, setWidgets] = useState<KpiWidget[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -207,22 +210,62 @@ export default function KpiStrip() {
 
   if (!loaded) return null;
 
+  const view = prefs.views.kpis;
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-bold text-ink-900">KPIs</h2>
-        <button
-          onClick={() => setAdding(true)}
-          className="rounded-md bg-teal-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-teal-600 transition-colors hover:bg-teal hover:text-primary-foreground"
-        >
-          + pin a cell
-        </button>
+        <div className="flex items-center gap-2">
+          {widgets.length > 0 && (
+            <ViewToggle
+              value={view}
+              onChange={(v) => update({ views: { kpis: v } })}
+              options={[
+                { value: "cards", icon: LayoutGrid, label: "Cards" },
+                { value: "strip", icon: GalleryHorizontal, label: "Strip" },
+              ]}
+            />
+          )}
+          <button
+            onClick={() => setAdding(true)}
+            className="rounded-md bg-teal-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-teal-600 transition-colors hover:bg-teal hover:text-primary-foreground"
+          >
+            + pin a cell
+          </button>
+        </div>
       </div>
 
       {widgets.length === 0 ? (
         <p className="font-mono text-xs text-ink-300">
           pin a cell — revenue total, ticket count, % done — and watch it live here
         </p>
+      ) : view === "strip" ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {widgets.map((w) => (
+            <div
+              key={w.id}
+              className="flex shrink-0 flex-col gap-0.5 rounded-xl border border-line bg-surface px-3.5 py-2.5 shadow-card"
+            >
+              <span className="truncate font-mono text-[10px] uppercase tracking-wider text-ink-400">
+                {w.label}
+              </span>
+              <span className="font-display text-lg font-bold tracking-tight text-ink-900">
+                <KpiValue value={w.value ?? null} format={w.format} />
+              </span>
+              {w.delta24h !== null && w.delta24h !== undefined && w.delta24h !== 0 && (
+                <span
+                  className={`font-mono text-[10px] font-semibold ${
+                    w.delta24h > 0 ? "text-teal-600" : "text-coral-600"
+                  }`}
+                >
+                  {w.delta24h > 0 ? "▲" : "▼"}{" "}
+                  {Math.abs(w.delta24h).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>

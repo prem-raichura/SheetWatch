@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { LayoutGrid, List } from "lucide-react";
 import { useAvailableSheets } from "../hooks/useAvailableSheets";
 import AvailableSheets from "../components/AvailableSheets";
 import AddSheetBox from "../components/AddSheetBox";
 import DriveBin from "../components/DriveBin";
+import ViewToggle from "../components/ViewToggle";
+import { usePrefs } from "../providers/PrefsProvider";
 
 type Filter = "all" | "tracked" | "untracked";
 type OwnerFilter = "all" | "mine" | "shared";
@@ -17,6 +20,7 @@ const SORTS: { value: Sort; label: string }[] = [
 
 export default function SheetsTab() {
   const { available, loading, error, refetch } = useAvailableSheets();
+  const { prefs, update } = usePrefs();
   const [showAddByUrl, setShowAddByUrl] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -162,6 +166,14 @@ export default function SheetsTab() {
                 </option>
               ))}
             </select>
+            <ViewToggle
+              value={prefs.views.sheets}
+              onChange={(v) => update({ views: { sheets: v } })}
+              options={[
+                { value: "list", icon: List, label: "List" },
+                { value: "cards", icon: LayoutGrid, label: "Cards" },
+              ]}
+            />
           </div>
           )}
         </div>
@@ -174,6 +186,7 @@ export default function SheetsTab() {
         available={filtered}
         loading={loading}
         error={error}
+        view={prefs.views.sheets}
         onRefresh={refetch}
         onChanged={refetch}
         emptyHint={

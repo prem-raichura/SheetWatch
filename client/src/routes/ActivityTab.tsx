@@ -4,17 +4,19 @@ import { useChanges } from "../hooks/useChanges";
 import { markSeen } from "../lib/lastSeen";
 import { usePrefs } from "../providers/PrefsProvider";
 import { formatTimeAgo } from "../lib/format";
+import { Rows3, Table2 } from "lucide-react";
 import PulseDot from "../components/PulseDot";
 import { SkeletonRows } from "../components/Skeleton";
 import ChangeContext from "../components/ChangeContext";
 import BlurFade from "../components/magic/BlurFade";
+import ViewToggle from "../components/ViewToggle";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 type TrackFilter = "tracked" | "untracked";
 
 export default function ActivityTab() {
-  const { prefs } = usePrefs();
+  const { prefs, update } = usePrefs();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const { changes, loading } = useChanges(query);
@@ -83,6 +85,16 @@ export default function ActivityTab() {
       <div className="flex flex-wrap items-center gap-2">
         {chip("tracked", "Tracked", changes.length - untrackedCount)}
         {chip("untracked", "Untracked", untrackedCount)}
+        <div className="ml-auto">
+          <ViewToggle
+            value={prefs.views.activity}
+            onChange={(v) => update({ views: { activity: v } })}
+            options={[
+              { value: "timeline", icon: Rows3, label: "Timeline" },
+              { value: "table", icon: Table2, label: "Table" },
+            ]}
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -101,6 +113,98 @@ export default function ActivityTab() {
               ? "Try a different sheet name, cell, or value."
               : "When a tracked sheet changes, it shows up here."}
           </p>
+        </div>
+      ) : prefs.views.activity === "table" ? (
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-card">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-line">
+                <th className="w-4 px-3 py-2" />
+                <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  Sheet
+                </th>
+                <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  Summary
+                </th>
+                <th className="px-3 py-2 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                  When
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((c) => {
+                const isOpen = open[c.id];
+                return (
+                  <>
+                    <tr
+                      key={c.id}
+                      onClick={() => toggle(c.id)}
+                      className="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-paper/60"
+                    >
+                      <td className="px-3 py-2.5">
+                        <span
+                          className={`inline-block text-ink-300 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                        >
+                          ›
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <span className="flex items-center gap-1.5">
+                          <span className="max-w-[14rem] truncate font-display text-sm font-semibold text-ink-900">
+                            {c.sheet.label}
+                          </span>
+                          {c.sheet.archivedAt && (
+                            <span className="shrink-0 rounded bg-paper px-1 font-mono text-[9px] uppercase text-ink-400">
+                              untracked
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="max-w-0 px-3 py-2.5">
+                        <span className="block truncate font-mono text-xs text-ink-500">
+                          {c.summary}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11px] text-ink-400">
+                        {formatTimeAgo(c.createdAt, prefs.time)}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b border-line bg-paper/40">
+                        <td colSpan={4} className="px-3 py-2">
+                          <div className="divide-y divide-line">
+                            {c.details.slice(0, 15).map((d, di) => (
+                              <div
+                                key={di}
+                                className="flex items-center gap-3 px-1 py-1.5 font-mono text-xs"
+                              >
+                                <span className="shrink-0 rounded bg-card px-1.5 py-0.5 text-[10px] text-ink-400">
+                                  {d.cell}
+                                </span>
+                                <span className="truncate text-coral-600 line-through">
+                                  {d.before || "∅"}
+                                </span>
+                                <span className="text-ink-300">→</span>
+                                <span className="truncate text-teal-600">{d.after || "∅"}</span>
+                              </div>
+                            ))}
+                            {c.details.length > 15 && (
+                              <Link
+                                to={`/history/${c.sheetId}`}
+                                className="block px-1 py-1.5 font-mono text-[11px] text-teal-600 hover:underline"
+                              >
+                                +{c.details.length - 15} more · open history →
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <ol className="relative space-y-2 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-line">

@@ -5,10 +5,9 @@ import NotifyToggles from "./NotifyToggles";
 import PulseDot from "./PulseDot";
 import SheetSettings from "./SheetSettings";
 import ConfirmModal from "./ConfirmModal";
-import { useToast } from "./Toast";
-import { api } from "../lib/api";
 import { usePrefs } from "../providers/PrefsProvider";
 import { formatTimeAgo } from "../lib/format";
+import { useSheetActions, SNOOZE_OPTIONS } from "../hooks/useSheetActions";
 
 interface Props {
   sheet: Sheet;
@@ -16,7 +15,7 @@ interface Props {
   onUpdated: () => void;
 }
 
-function scopeLabel(sheet: Sheet): string {
+export function scopeLabel(sheet: Sheet): string {
   if (sheet.watchMode === "rowmatch" && sheet.matchColumn) {
     return `rows: ${sheet.matchColumn}=${sheet.matchValue ?? ""}`;
   }
@@ -27,66 +26,17 @@ function scopeLabel(sheet: Sheet): string {
   return sheet.range;
 }
 
-const SNOOZE_OPTIONS = [
-  { label: "1 hour", ms: 3_600_000 },
-  { label: "8 hours", ms: 28_800_000 },
-  { label: "24 hours", ms: 86_400_000 },
-];
-
 export default function SheetRow({ sheet, projects, onUpdated }: Props) {
   const { prefs } = usePrefs();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [pausing, setPausing] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
-  const toast = useToast();
+  const { checking, pausing, paused, errored, snoozed, checkNow, togglePause, snooze, remove } =
+    useSheetActions(sheet, onUpdated);
 
-  const errored = !!sheet.errorMessage;
-  const paused = sheet.paused;
-  const snoozed = !!sheet.snoozedUntil && new Date(sheet.snoozedUntil) > new Date();
-
-  const checkNow = async () => {
-    setChecking(true);
-    try {
-      await api.post(`/api/sheets/${sheet.id}/check`);
-      toast.info(`Checking “${sheet.label}” now…`);
-      setTimeout(onUpdated, 2500);
-    } catch {
-      toast.error("Couldn’t queue a check");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const togglePause = async () => {
-    setPausing(true);
-    try {
-      await api.patch(`/api/sheets/${sheet.id}`, { paused: !paused });
-      toast.success(paused ? "Resumed watching" : "Paused");
-      onUpdated();
-    } catch {
-      toast.error("Couldn’t update");
-    } finally {
-      setPausing(false);
-    }
-  };
-
-  const snooze = async (until: string | null) => {
+  const doSnooze = (until: string | null) => {
     setSnoozeOpen(false);
-    try {
-      await api.patch(`/api/sheets/${sheet.id}`, { snoozedUntil: until });
-      toast.success(until ? "Notifications snoozed" : "Snooze cleared");
-      onUpdated();
-    } catch {
-      toast.error("Couldn’t update snooze");
-    }
-  };
-
-  const remove = async () => {
-    await api.delete(`/api/sheets/${sheet.id}`);
-    toast.success(`Stopped watching “${sheet.label}”`);
-    onUpdated();
+    snooze(until);
   };
 
   return (
@@ -121,7 +71,7 @@ export default function SheetRow({ sheet, projects, onUpdated }: Props) {
               )}
               {snoozed && (
                 <button
-                  onClick={() => snooze(null)}
+                  onClick={() => doSnooze(null)}
                   title="Click to unsnooze"
                   className="shrink-0 rounded bg-paper px-1.5 py-0.5 font-mono text-[10px] text-ink-500 transition-colors hover:bg-coral-soft hover:text-coral-600"
                 >
@@ -190,7 +140,7 @@ export default function SheetRow({ sheet, projects, onUpdated }: Props) {
                   {SNOOZE_OPTIONS.map((o) => (
                     <button
                       key={o.label}
-                      onClick={() => snooze(new Date(Date.now() + o.ms).toISOString())}
+                      onClick={() => doSnooze(new Date(Date.now() + o.ms).toISOString())}
                       className="block w-full px-3 py-1.5 text-left font-mono text-[11px] text-ink-700 transition-colors hover:bg-paper hover:text-ink-900"
                     >
                       {o.label}
@@ -198,7 +148,7 @@ export default function SheetRow({ sheet, projects, onUpdated }: Props) {
                   ))}
                   {snoozed && (
                     <button
-                      onClick={() => snooze(null)}
+                      onClick={() => doSnooze(null)}
                       className="block w-full border-t border-line px-3 py-1.5 text-left font-mono text-[11px] text-coral-600 transition-colors hover:bg-coral-soft"
                     >
                       unsnooze

@@ -10,6 +10,7 @@ import { digestSuppressesEmail } from "./digest";
 import { CellChange } from "./types";
 import { dispatch, safeHost, type ChannelTarget } from "./notify/dispatch";
 import { checkKpiThresholds } from "./kpi";
+import { publishRealtime } from "./realtime";
 
 // Polls a single sheet. Returns the new ChangeLog id if the sheet changed,
 // null otherwise. Does NOT send notifications — the caller decides how
@@ -60,6 +61,16 @@ export async function pollSheet(sheetId: string): Promise<string | null> {
     await checkKpiThresholds(sheet, rows).catch((err) =>
       console.error(`KPI threshold check failed for ${sheetId}:`, err?.message ?? err)
     );
+
+    // Nudge any live UI to refetch immediately — even when notifications are
+    // suppressed/snoozed, the change should still surface in the app.
+    void publishRealtime(sheet.userId, {
+      kind: "change",
+      sheetId,
+      changeLogId: changeLog.id,
+      label: sheet.label,
+      summary,
+    });
 
     return changeLog.id;
   } catch (err: any) {

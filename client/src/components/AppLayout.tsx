@@ -4,6 +4,7 @@ import { m } from "motion/react";
 import { Moon, Settings as SettingsIcon, Sun } from "lucide-react";
 import { useTheme } from "../providers/ThemeProvider";
 import { usePrefs } from "../providers/PrefsProvider";
+import { useRealtime } from "../providers/RealtimeProvider";
 import PageTransition from "./PageTransition";
 import { User } from "../types";
 import { logout } from "../lib/auth";
@@ -30,6 +31,8 @@ export default function AppLayout({ user }: Props) {
   const { permission, requestPermission } = usePushPermission();
   const { isDark, toggleTheme } = useTheme();
   const { prefs } = usePrefs();
+  const { status } = useRealtime();
+  const live = status === "connected";
   const { changes } = useChanges();
   const [lastSeen, setLastSeen] = useState(getLastSeen);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -102,10 +105,19 @@ export default function AppLayout({ user }: Props) {
             <span className="font-display text-lg font-bold tracking-tight text-ink-900">
               SheetWatch
             </span>
-            <span className="ml-2 hidden items-center gap-1.5 rounded-full border border-line bg-teal-soft px-2.5 py-1 sm:flex">
-              <PulseDot tone="live" />
-              <span className="font-mono text-[11px] font-medium text-teal-600">
-                watching · 3 min
+            <span
+              className={`ml-2 hidden items-center gap-1.5 rounded-full border px-2.5 py-1 sm:flex ${
+                live ? "border-line bg-teal-soft" : "border-line bg-secondary"
+              }`}
+              title={live ? "Live updates connected" : "Polling every 30s"}
+            >
+              <PulseDot tone={live ? "live" : "muted"} />
+              <span
+                className={`font-mono text-[11px] font-medium ${
+                  live ? "text-teal-600" : "text-ink-400"
+                }`}
+              >
+                {live ? "live" : "polling"}
               </span>
             </span>
           </div>

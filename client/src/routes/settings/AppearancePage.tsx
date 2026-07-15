@@ -249,6 +249,25 @@ export default function AppearancePage() {
           })}
         </div>
       </Section>
+
+      <Section
+        title="Layout"
+        hint="Each page remembers how you like to see it — switch with the view control in that page's header."
+      >
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 font-mono text-xs sm:grid-cols-4">
+          {[
+            { label: "Tracking", value: prefs.views.tracking },
+            { label: "Sheets", value: prefs.views.sheets },
+            { label: "Activity", value: prefs.views.activity },
+            { label: "KPIs", value: prefs.views.kpis },
+          ].map((v) => (
+            <div key={v.label} className="flex items-center justify-between gap-2">
+              <span className="text-ink-500">{v.label}</span>
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-ink-700">{v.value}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }

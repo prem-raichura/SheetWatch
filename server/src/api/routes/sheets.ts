@@ -33,7 +33,7 @@ router.get("/", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
   const sheets = await prisma.sheet.findMany({
     where: { userId, archivedAt: null },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     include: {
       project: { select: { id: true, name: true, color: true } },
       webhooks: { select: { webhookId: true } },
@@ -141,6 +141,12 @@ router.post("/", requireAuth, async (req, res) => {
       }
     }
 
+    // Append after existing sheets so manual ordering is preserved.
+    const maxOrder = await prisma.sheet.aggregate({
+      where: { userId },
+      _max: { sortOrder: true },
+    });
+
     const sheet = await prisma.sheet.create({
       data: {
         userId,
@@ -149,6 +155,7 @@ router.post("/", requireAuth, async (req, res) => {
         ...(projectId && { projectId }),
         notifyEmail,
         notifyPush,
+        sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
         lastHash: hashGrid(rows),
         lastSnapshot: rows,
         lastCheckedAt: new Date(),
@@ -179,6 +186,74 @@ router.post("/", requireAuth, async (req, res) => {
     console.error("Add sheet error:", err);
     res.status(500).json({ error: "Failed to add sheet" });
   }
+});
+
+// Reorder sheets and/or move them between projects. Body carries the full
+// desired order of the affected groups: for each group, the listed sheets get
+// projectId = group.projectId and sortOrder = their index. Sending source +
+// target groups makes this a move-between-projects operation too.
+router.post("/reorder", requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const { groups } = req.body as {
+    groups?: { projectId: string | null; ids: unknown }[];
+  };
+
+  if (!Array.isArray(groups) || groups.length === 0) {
+    res.status(400).json({ error: "groups must be a non-empty array" });
+    return;
+  }
+
+  const allIds: string[] = [];
+  for (const g of groups) {
+    if (!g || (g.projectId !== null && typeof g.projectId !== "string")) {
+      res.status(400).json({ error: "each group needs a projectId (string or null)" });
+      return;
+    }
+    if (!Array.isArray(g.ids) || !g.ids.every((id) => typeof id === "string")) {
+      res.status(400).json({ error: "each group needs an ids array of strings" });
+      return;
+    }
+    allIds.push(...(g.ids as string[]));
+  }
+
+  // Every sheet must belong to the user (and, when moving into a project, the
+  // project must be theirs too).
+  const owned = await prisma.sheet.findMany({
+    where: { id: { in: allIds }, userId, archivedAt: null },
+    select: { id: true },
+  });
+  const ownedIds = new Set(owned.map((s) => s.id));
+  if (!allIds.every((id) => ownedIds.has(id))) {
+    res.status(404).json({ error: "Sheet not found" });
+    return;
+  }
+
+  const targetProjectIds = groups
+    .map((g) => g.projectId)
+    .filter((p): p is string => typeof p === "string");
+  if (targetProjectIds.length > 0) {
+    const projects = await prisma.project.findMany({
+      where: { id: { in: targetProjectIds }, userId },
+      select: { id: true },
+    });
+    const projectIds = new Set(projects.map((p) => p.id));
+    if (!targetProjectIds.every((id) => projectIds.has(id))) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+  }
+
+  await prisma.$transaction(
+    groups.flatMap((g) =>
+      (g.ids as string[]).map((id, index) =>
+        prisma.sheet.update({
+          where: { id, userId },
+          data: { projectId: g.projectId, sortOrder: index },
+        })
+      )
+    )
+  );
+  res.json({ ok: true });
 });
 
 router.patch("/:id", requireAuth, async (req, res) => {

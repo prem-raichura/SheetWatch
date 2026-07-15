@@ -24,6 +24,12 @@ export interface UserPrefs {
   };
   time: { hour12: boolean; relative: boolean };
   landingTab: "/overview" | "/sheets" | "/tracking" | "/activity";
+  views: {
+    tracking: "cards" | "list";
+    sheets: "list" | "cards";
+    activity: "timeline" | "table";
+    kpis: "cards" | "strip";
+  };
 }
 
 export const DASHBOARD_SECTIONS: { id: string; title: string }[] = [
@@ -72,6 +78,12 @@ export const DEFAULT_PREFS: UserPrefs = {
   },
   time: { hour12: true, relative: true },
   landingTab: "/overview",
+  views: {
+    tracking: "cards",
+    sheets: "list",
+    activity: "timeline",
+    kpis: "cards",
+  },
 };
 
 type Plain = Record<string, unknown>;

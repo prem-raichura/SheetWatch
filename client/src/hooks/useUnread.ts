@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../lib/api";
 import { ChangeLogWithSheet } from "../types";
+import { useRealtimeRefetch } from "./useRealtimeRefetch";
 
 // Server-backed unread changes for the notification bell. Polls lightly and
 // refreshes when the tab regains focus.
@@ -31,6 +32,8 @@ export function useUnread() {
       window.removeEventListener("focus", onFocus);
     };
   }, [refetch]);
+
+  useRealtimeRefetch(refetch);
 
   const markRead = useCallback(
     async (ids?: string[]) => {

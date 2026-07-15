@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../lib/api";
 import { Sheet } from "../types";
+import { useRealtimeRefetch } from "./useRealtimeRefetch";
 
 export function useSheets() {
   const [sheets, setSheets] = useState<Sheet[]>([]);
@@ -24,6 +25,8 @@ export function useSheets() {
     const interval = setInterval(refetch, 30_000);
     return () => clearInterval(interval);
   }, [refetch]);
+
+  useRealtimeRefetch(refetch);
 
   return { sheets, loading, error, refetch };
 }

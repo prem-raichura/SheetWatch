@@ -19,6 +19,7 @@ const SharesPage = lazy(() => import("./routes/settings/SharesPage"));
 const ShareView = lazy(() => import("./routes/ShareView"));
 import { PrefsProvider, usePrefs } from "./providers/PrefsProvider";
 import { MotionProvider } from "./providers/MotionProvider";
+import { RealtimeProvider } from "./providers/RealtimeProvider";
 import { installSoundUnlock } from "./lib/sound";
 import { getMe } from "./lib/auth";
 import { User } from "./types";
@@ -60,7 +61,7 @@ export default function App() {
             element={user ? <LandingRedirect /> : <Login />}
           />
           {user ? (
-            <Route element={<AppLayout user={user} />}>
+            <Route element={<RealtimeProvider><AppLayout user={user} /></RealtimeProvider>}>
               <Route path="/overview" element={<OverviewTab />} />
               <Route path="/sheets" element={<SheetsTab />} />
               <Route path="/tracking" element={<TrackingTab />} />

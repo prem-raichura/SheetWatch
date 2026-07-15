@@ -1,24 +1,162 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { GripVertical, LayoutGrid, List } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useSheets } from "../hooks/useSheets";
 import { useProjects } from "../hooks/useProjects";
 import SheetRow from "../components/SheetRow";
+import SheetListRow from "../components/SheetListRow";
+import ViewToggle from "../components/ViewToggle";
 import BlurFade from "../components/magic/BlurFade";
 import ProjectModal from "../components/ProjectModal";
 import AddSheetsModal from "../components/AddSheetsModal";
 import WebhooksModal from "../components/WebhooksModal";
 import { useToast } from "../components/Toast";
 import { SkeletonRows } from "../components/Skeleton";
+import { usePrefs } from "../providers/PrefsProvider";
 import { Project, Sheet } from "../types";
 import { api } from "../lib/api";
+
+const UNGROUPED = "ungrouped";
+type View = "cards" | "list";
+type Board = Record<string, string[]>;
+
+// Ordered sheet ids per container, straight from the server order.
+function buildBoard(sheets: Sheet[], projects: Project[]): Board {
+  const board: Board = { [UNGROUPED]: [] };
+  for (const p of projects) board[p.id] = [];
+  for (const s of sheets) {
+    const key = s.projectId ?? UNGROUPED;
+    (board[key] ??= []).push(s.id);
+  }
+  return board;
+}
+
+const projectIdOf = (container: string) => (container === UNGROUPED ? null : container);
+
+// One draggable sheet — grip is the only handle so the row's own buttons keep
+// working. Renders a card or a compact row per the current view.
+function SortableSheet({
+  sheet,
+  container,
+  view,
+  projects,
+  onUpdated,
+}: {
+  sheet: Sheet;
+  container: string;
+  view: View;
+  projects: Project[];
+  onUpdated: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: sheet.id,
+    data: { type: "sheet", container },
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const grip = (
+    <button
+      aria-label={`Drag ${sheet.label}`}
+      className="cursor-grab text-ink-300 transition-colors hover:text-ink-500 active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+
+  if (view === "list") {
+    return (
+      <div ref={setNodeRef} style={style} className="flex items-center gap-1 pl-2">
+        {grip}
+        <div className="min-w-0 flex-1">
+          <SheetListRow sheet={sheet} projects={projects} onUpdated={onUpdated} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="flex gap-1">
+      <div className="pt-4">{grip}</div>
+      <div className="min-w-0 flex-1">
+        <SheetRow sheet={sheet} projects={projects} onUpdated={onUpdated} />
+      </div>
+    </div>
+  );
+}
+
+// Drop target wrapper for a group, so sheets can be dropped into empty groups
+// and across group boundaries.
+function GroupList({
+  container,
+  view,
+  children,
+  empty,
+}: {
+  container: string;
+  view: View;
+  children: ReactNode;
+  empty: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `container:${container}`,
+    data: { type: "container", container },
+  });
+  const ring = isOver ? "ring-2 ring-teal/40" : "";
+  if (view === "list") {
+    return (
+      <div
+        ref={setNodeRef}
+        className={`divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface shadow-card ${ring} ${
+          empty ? "px-3 py-4" : ""
+        }`}
+      >
+        {empty ? <p className="font-mono text-xs text-ink-300">drop a sheet here</p> : children}
+      </div>
+    );
+  }
+  return (
+    <div ref={setNodeRef} className={`space-y-3 rounded-2xl ${ring} ${empty ? "p-3" : ""}`}>
+      {empty ? (
+        <p className="pl-1 font-mono text-xs text-ink-300">drop a sheet here</p>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
 
 export default function TrackingTab() {
   const { sheets, loading, error, refetch } = useSheets();
   const { projects, refetch: refetchProjects, createProject, updateProject, deleteProject } =
     useProjects();
+  const { prefs, update } = usePrefs();
   const toast = useToast();
+  const view = prefs.views.tracking;
 
-  const [filter, setFilter] = useState<string>("all"); // "all" | "ungrouped" | projectId
+  const [filter, setFilter] = useState<string>("all"); // "all" | UNGROUPED | projectId
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<{ open: boolean; project: Project | null }>({
     open: false,
@@ -27,25 +165,34 @@ export default function TrackingTab() {
   const [addTo, setAddTo] = useState<Project | null>(null);
   const [webhooksOpen, setWebhooksOpen] = useState(false);
 
+  const [board, setBoard] = useState<Board>({});
+  const [activeSheetId, setActiveSheetId] = useState<string | null>(null);
+  const dragSource = useRef<string | null>(null);
+
   const refetchAll = () => {
     refetch();
     refetchProjects();
   };
 
+  const sheetById = useMemo(() => new Map(sheets.map((s) => [s.id, s])), [sheets]);
   const q = query.trim().toLowerCase();
-  const byProject = (id: string | null) =>
-    sheets.filter(
-      (s) => (s.projectId ?? null) === id && (!q || s.label.toLowerCase().includes(q))
-    );
+  const searching = q !== "";
+
+  // Server order is the source of truth; rebuild the board whenever it changes
+  // and we're not mid-drag.
+  useEffect(() => {
+    if (activeSheetId) return;
+    setBoard(buildBoard(sheets, projects));
+  }, [sheets, projects, activeSheetId]);
+
+  const countOf = (container: string) => (board[container] ?? []).length;
 
   const bulk = async (p: Project, action: "pause" | "resume" | "check") => {
     try {
-      const { affected } = await api.post<{ affected: number }>(
-        `/api/projects/${p.id}/bulk`,
-        { action }
-      );
-      const verb =
-        action === "pause" ? "paused" : action === "resume" ? "resumed" : "checking";
+      const { affected } = await api.post<{ affected: number }>(`/api/projects/${p.id}/bulk`, {
+        action,
+      });
+      const verb = action === "pause" ? "paused" : action === "resume" ? "resumed" : "checking";
       toast.success(`${verb} ${affected} sheet${affected !== 1 ? "s" : ""} in “${p.name}”`);
       if (action === "check") setTimeout(refetchAll, 2500);
       else refetchAll();
@@ -54,15 +201,108 @@ export default function TrackingTab() {
     }
   };
 
-  const moveProject = async (index: number, dir: -1 | 1) => {
-    const target = projects[index + dir];
-    const current = projects[index];
-    if (!target || !current) return;
-    await Promise.all([
-      updateProject(current.id, { sortOrder: target.sortOrder }),
-      updateProject(target.id, { sortOrder: current.sortOrder }),
-    ]);
-    refetchProjects();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // Only the unfiltered, unsearched view allows dragging (projects + sheets
+  // across groups). A single-group filter still reorders within that group.
+  const dndEnabled = !searching;
+  const draggableProjects = filter === "all" && dndEnabled;
+
+  const containerFor = (over: { data?: { current?: { container?: string } }; id: string | number }) => {
+    const c = over.data?.current?.container;
+    if (c) return c;
+    if (typeof over.id === "string" && over.id.startsWith("container:")) {
+      return over.id.slice("container:".length);
+    }
+    return null;
+  };
+
+  const persistGroups = (next: Board, containers: string[]) => {
+    api
+      .post("/api/sheets/reorder", {
+        groups: containers.map((c) => ({ projectId: projectIdOf(c), ids: next[c] ?? [] })),
+      })
+      .catch(() => {
+        toast.error("Couldn’t save the new order");
+        refetchAll();
+      });
+  };
+
+  const onDragStart = (e: DragStartEvent) => {
+    if (e.active.data.current?.type !== "sheet") return;
+    setActiveSheetId(e.active.id as string);
+    dragSource.current = (e.active.data.current.container as string) ?? null;
+  };
+
+  // Live cross-container hop: move the id between board groups so it follows
+  // the cursor into another project.
+  const onDragOver = (e: DragOverEvent) => {
+    const { active, over } = e;
+    if (!over || active.data.current?.type !== "sheet") return;
+    const from = active.data.current.container as string;
+    const to = containerFor(over);
+    if (!to || from === to) return;
+
+    setBoard((prev) => {
+      const fromIds = [...(prev[from] ?? [])];
+      const toIds = [...(prev[to] ?? [])];
+      const id = active.id as string;
+      const idx = fromIds.indexOf(id);
+      if (idx === -1) return prev;
+      fromIds.splice(idx, 1);
+      const overIsSheet = over.data.current?.type === "sheet";
+      const insertAt = overIsSheet ? toIds.indexOf(over.id as string) : toIds.length;
+      toIds.splice(insertAt < 0 ? toIds.length : insertAt, 0, id);
+      return { ...prev, [from]: fromIds, [to]: toIds };
+    });
+    // The active item now lives in `to`; keep its data in sync for the next hop.
+    active.data.current.container = to;
+  };
+
+  const onSheetDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    const source = dragSource.current;
+    setActiveSheetId(null);
+    dragSource.current = null;
+    if (!over) {
+      setBoard(buildBoard(sheets, projects));
+      return;
+    }
+    const container = (active.data.current?.container as string) ?? source;
+    if (!container) return;
+
+    setBoard((prev) => {
+      const ids = [...(prev[container] ?? [])];
+      const oldIndex = ids.indexOf(active.id as string);
+      const overIsSheet = over.data.current?.type === "sheet";
+      const newIndex = overIsSheet ? ids.indexOf(over.id as string) : ids.length - 1;
+      const next = {
+        ...prev,
+        [container]:
+          oldIndex === -1 || newIndex === -1 ? ids : arrayMove(ids, oldIndex, newIndex),
+      };
+      const affected = Array.from(new Set([source, container].filter(Boolean) as string[]));
+      persistGroups(next, affected);
+      return next;
+    });
+  };
+
+  const onProjectDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = projects.findIndex((p) => p.id === active.id);
+    const to = projects.findIndex((p) => p.id === over.id);
+    if (from === -1 || to === -1) return;
+    const next = arrayMove(projects, from, to);
+    api.post("/api/projects/reorder", { ids: next.map((p) => p.id) }).then(refetchProjects, () => {
+      toast.error("Couldn’t reorder projects");
+      refetchProjects();
+    });
+  };
+
+  const onDragEnd = (e: DragEndEvent) => {
+    if (e.active.data.current?.type === "project") onProjectDragEnd(e);
+    else onSheetDragEnd(e);
   };
 
   const chip = (key: string, label: string, color?: string, count?: number) => (
@@ -83,88 +323,147 @@ export default function TrackingTab() {
     </button>
   );
 
-  const renderSheets = (list: Sheet[]) =>
-    list.length === 0 ? (
-      <p className="pl-1 font-mono text-xs text-ink-300">no sheets here</p>
-    ) : (
-      <div className="space-y-3">
-        {list.map((s, i) => (
-          <BlurFade key={s.id} delay={Math.min(i, 8) * 0.04}>
-            <SheetRow sheet={s} projects={projects} onUpdated={refetchAll} />
-          </BlurFade>
-        ))}
-      </div>
-    );
+  // Sheets of a container, in board order, optionally filtered by search.
+  const sheetsOf = (container: string): Sheet[] =>
+    (board[container] ?? [])
+      .map((id) => sheetById.get(id))
+      .filter((s): s is Sheet => !!s && (!q || s.label.toLowerCase().includes(q)));
 
-  const showProject = (p: Project, index: number) => {
-    if (filter !== "all" && filter !== p.id) return null;
-    const members = byProject(p.id);
-    const anyActive = members.some((s) => !s.paused);
-    return (
-      <section key={p.id} className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-          <h2 className="font-display text-sm font-bold text-ink-900">{p.name}</h2>
-          <span className="font-mono text-[11px] text-ink-400">{byProject(p.id).length}</span>
-          <div className="ml-auto flex flex-wrap items-center gap-1">
-            <button
-              onClick={() => setAddTo(p)}
-              className="rounded-md bg-teal-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-teal-600 transition-colors hover:bg-teal hover:text-primary-foreground"
-            >
-              + add sheet
-            </button>
-            {members.length > 0 && (
-              <>
-                <button
-                  onClick={() => bulk(p, "check")}
-                  disabled={!anyActive}
-                  className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-teal-600 disabled:opacity-30"
-                  title="Check all sheets in this project now"
-                >
-                  ↻ check all
-                </button>
-                <button
-                  onClick={() => bulk(p, anyActive ? "pause" : "resume")}
-                  className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-900"
-                  title={anyActive ? "Pause all sheets in this project" : "Resume all sheets in this project"}
-                >
-                  {anyActive ? "❚❚ pause all" : "▶ resume all"}
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => moveProject(index, -1)}
-              disabled={index === 0}
-              aria-label={`Move ${p.name} up`}
-              className="rounded-md px-1.5 py-0.5 text-ink-300 transition-colors hover:bg-paper hover:text-ink-700 disabled:opacity-30"
-              title="Move up"
-            >
-              ↑
-            </button>
-            <button
-              onClick={() => moveProject(index, 1)}
-              disabled={index === projects.length - 1}
-              aria-label={`Move ${p.name} down`}
-              className="rounded-md px-1.5 py-0.5 text-ink-300 transition-colors hover:bg-paper hover:text-ink-700 disabled:opacity-30"
-              title="Move down"
-            >
-              ↓
-            </button>
-            <button
-              onClick={() => setModal({ open: true, project: p })}
-              aria-label={`Edit ${p.name}`}
-              className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-900"
-            >
-              edit
-            </button>
+  const renderGroupBody = (container: string) => {
+    const list = sheetsOf(container);
+
+    if (searching) {
+      // No drag while searching — indices would be ambiguous with hidden rows.
+      if (list.length === 0) {
+        return <p className="pl-1 font-mono text-xs text-ink-300">no matches here</p>;
+      }
+      if (view === "list") {
+        return (
+          <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+            {list.map((s) => (
+              <SheetListRow key={s.id} sheet={s} projects={projects} onUpdated={refetchAll} />
+            ))}
           </div>
+        );
+      }
+      return (
+        <div className="space-y-3">
+          {list.map((s, i) => (
+            <BlurFade key={s.id} delay={Math.min(i, 8) * 0.04}>
+              <SheetRow sheet={s} projects={projects} onUpdated={refetchAll} />
+            </BlurFade>
+          ))}
         </div>
-        {renderSheets(members)}
-      </section>
+      );
+    }
+
+    return (
+      <SortableContext items={board[container] ?? []} strategy={verticalListSortingStrategy}>
+        <GroupList container={container} view={view} empty={list.length === 0}>
+          {list.map((s) => (
+            <SortableSheet
+              key={s.id}
+              sheet={s}
+              container={container}
+              view={view}
+              projects={projects}
+              onUpdated={refetchAll}
+            />
+          ))}
+        </GroupList>
+      </SortableContext>
     );
   };
 
-  const ungrouped = byProject(null);
+  const projectHeader = (p: Project, dragHandle?: ReactNode) => {
+    const anyActive = sheetsOf(p.id).some((s) => !s.paused);
+    return (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        {dragHandle}
+        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+        <h2 className="font-display text-sm font-bold text-ink-900">{p.name}</h2>
+        <span className="font-mono text-[11px] text-ink-400">{countOf(p.id)}</span>
+        <div className="ml-auto flex flex-wrap items-center gap-1">
+          <button
+            onClick={() => setAddTo(p)}
+            className="rounded-md bg-teal-soft px-2 py-0.5 font-mono text-[11px] font-semibold text-teal-600 transition-colors hover:bg-teal hover:text-primary-foreground"
+          >
+            + add sheet
+          </button>
+          {countOf(p.id) > 0 && (
+            <>
+              <button
+                onClick={() => bulk(p, "check")}
+                disabled={!anyActive}
+                className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-teal-600 disabled:opacity-30"
+                title="Check all sheets in this project now"
+              >
+                ↻ check all
+              </button>
+              <button
+                onClick={() => bulk(p, anyActive ? "pause" : "resume")}
+                className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-900"
+                title={anyActive ? "Pause all sheets in this project" : "Resume all sheets"}
+              >
+                {anyActive ? "❚❚ pause all" : "▶ resume all"}
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setModal({ open: true, project: p })}
+            aria-label={`Edit ${p.name}`}
+            className="rounded-md px-2 py-0.5 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-900"
+          >
+            edit
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const showProject = (p: Project) => {
+    if (filter !== "all" && filter !== p.id) return null;
+    if (!draggableProjects) {
+      return (
+        <section key={p.id} className="space-y-3">
+          {projectHeader(p)}
+          {renderGroupBody(p.id)}
+        </section>
+      );
+    }
+    return (
+      <SortableProject key={p.id} id={p.id} header={(h) => projectHeader(p, h)}>
+        {renderGroupBody(p.id)}
+      </SortableProject>
+    );
+  };
+
+  const showUngrouped =
+    (filter === "all" || filter === UNGROUPED) && countOf(UNGROUPED) > 0 ? (
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-ink-300" />
+          <h2 className="font-display text-sm font-bold text-ink-500">Ungrouped</h2>
+          <span className="font-mono text-[11px] text-ink-400">{countOf(UNGROUPED)}</span>
+        </div>
+        {renderGroupBody(UNGROUPED)}
+      </section>
+    ) : null;
+
+  const activeSheet = activeSheetId ? sheetById.get(activeSheetId) : null;
+
+  const groups = (
+    <div className="space-y-8">
+      {draggableProjects ? (
+        <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-8">{projects.map((p) => showProject(p))}</div>
+        </SortableContext>
+      ) : (
+        projects.map((p) => showProject(p))
+      )}
+      {showUngrouped}
+    </div>
+  );
 
   return (
     <div className="animate-fade-up space-y-8">
@@ -172,7 +471,7 @@ export default function TrackingTab() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-ink-900">Tracking</h1>
           <p className="mt-1 text-sm text-ink-500">
-            Watched on a schedule. Group into projects, tune what each one watches.
+            Watched on a schedule. Drag to reorder or move between projects.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -212,8 +511,8 @@ export default function TrackingTab() {
         <>
           <div className="flex flex-wrap items-center gap-2">
             {chip("all", "All", undefined, sheets.length)}
-            {projects.map((p) => chip(p.id, p.name, p.color, byProject(p.id).length))}
-            {ungrouped.length > 0 && chip("ungrouped", "Ungrouped", undefined, ungrouped.length)}
+            {projects.map((p) => chip(p.id, p.name, p.color, countOf(p.id)))}
+            {countOf(UNGROUPED) > 0 && chip(UNGROUPED, "Ungrouped", undefined, countOf(UNGROUPED))}
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -221,22 +520,42 @@ export default function TrackingTab() {
               aria-label="Search tracked sheets"
               className="ml-auto w-40 rounded-full border border-line bg-surface px-3 py-1.5 text-xs outline-hidden transition-shadow focus:border-teal focus:ring-4 focus:ring-teal/10"
             />
+            <ViewToggle
+              value={view}
+              onChange={(v) => update({ views: { tracking: v } })}
+              options={[
+                { value: "cards", icon: LayoutGrid, label: "Cards" },
+                { value: "list", icon: List, label: "List" },
+              ]}
+            />
           </div>
 
-          <div className="space-y-8">
-            {projects.map((p, i) => showProject(p, i))}
-
-            {(filter === "all" || filter === "ungrouped") && ungrouped.length > 0 && (
-              <section className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-ink-300" />
-                  <h2 className="font-display text-sm font-bold text-ink-500">Ungrouped</h2>
-                  <span className="font-mono text-[11px] text-ink-400">{ungrouped.length}</span>
-                </div>
-                {renderSheets(ungrouped)}
-              </section>
-            )}
-          </div>
+          {dndEnabled ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+            >
+              {groups}
+              <DragOverlay>
+                {activeSheet ? (
+                  view === "list" ? (
+                    <div className="rounded-2xl border border-line bg-surface shadow-pop">
+                      <SheetListRow sheet={activeSheet} projects={projects} onUpdated={() => {}} />
+                    </div>
+                  ) : (
+                    <div className="opacity-90">
+                      <SheetRow sheet={activeSheet} projects={projects} onUpdated={() => {}} />
+                    </div>
+                  )
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          ) : (
+            groups
+          )}
         </>
       )}
 
@@ -279,5 +598,41 @@ export default function TrackingTab() {
         />
       )}
     </div>
+  );
+}
+
+// Project group with a header drag handle (unfiltered view only).
+function SortableProject({
+  id,
+  header,
+  children,
+}: {
+  id: string;
+  header: (handle: ReactNode) => ReactNode;
+  children: ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    data: { type: "project" },
+  });
+  const handle = (
+    <button
+      aria-label="Drag project"
+      className="cursor-grab text-ink-300 hover:text-ink-500 active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+  return (
+    <section
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`space-y-3 ${isDragging ? "z-10 opacity-80" : ""}`}
+    >
+      {header(handle)}
+      {children}
+    </section>
   );
 }

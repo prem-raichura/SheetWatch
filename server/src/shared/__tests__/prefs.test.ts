@@ -109,6 +109,8 @@ describe("applyPrefsPatch", () => {
     expect(prefs.appearance.accent).toBe("#123456");
     expect(prefs.tables.sheets.columns).toEqual(["name", "tracked"]);
     expect(prefs.dashboard.sectionOrder).toEqual(DEFAULT_PREFS.dashboard.sectionOrder);
+    // views branch defaults in for users who predate it
+    expect(prefs.views).toEqual(DEFAULT_PREFS.views);
   });
 
   it("does not mutate the current prefs object", () => {
@@ -177,6 +179,37 @@ describe("applyPrefsPatch", () => {
     expect(applyPrefsPatch(DEFAULT_PREFS, { landingTab: "/settings" }).error).toMatch(
       /landingTab/
     );
+  });
+
+  it("accepts valid view modes", () => {
+    const { prefs, error } = applyPrefsPatch(DEFAULT_PREFS, {
+      views: { tracking: "list", sheets: "cards", activity: "table", kpis: "strip" },
+    });
+    expect(error).toBeNull();
+    expect(prefs.views).toEqual({
+      tracking: "list",
+      sheets: "cards",
+      activity: "table",
+      kpis: "strip",
+    });
+  });
+
+  it("rejects bad view modes and unknown surfaces", () => {
+    expect(applyPrefsPatch(DEFAULT_PREFS, { views: { tracking: "grid" } }).error).toMatch(
+      /views\.tracking/
+    );
+    expect(applyPrefsPatch(DEFAULT_PREFS, { views: { kpis: "cards" } }).error).toBeNull();
+    expect(applyPrefsPatch(DEFAULT_PREFS, { views: { mystery: "cards" } }).error).toMatch(
+      /unknown pref key "views\.mystery"/
+    );
+  });
+
+  it("allows reordering table columns (order = display order)", () => {
+    const { prefs, error } = applyPrefsPatch(DEFAULT_PREFS, {
+      tables: { tracking: { columns: ["label", "status", "actions"] } },
+    });
+    expect(error).toBeNull();
+    expect(prefs.tables.tracking.columns).toEqual(["label", "status", "actions"]);
   });
 
   it("rejects unknown keys and non-object patches", () => {

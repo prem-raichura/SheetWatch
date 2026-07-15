@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../lib/api";
 import { Overview } from "../types";
+import { useRealtimeRefetch } from "./useRealtimeRefetch";
 
 export function useOverview() {
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -21,6 +22,8 @@ export function useOverview() {
     const interval = setInterval(refetch, 30_000);
     return () => clearInterval(interval);
   }, [refetch]);
+
+  useRealtimeRefetch(refetch);
 
   return { overview, loading, refetch };
 }
