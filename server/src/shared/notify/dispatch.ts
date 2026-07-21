@@ -198,21 +198,29 @@ export async function flushQueuedNotifications(now = new Date()): Promise<number
         : "https://sheetwatch.local",
     };
     const targets = await resolveQueuedTargets(row);
-    let error: string | null = null;
+    let ok = 0;
+    let lastError: string | null = null;
     for (const t of targets) {
       try {
         await deliver(t, payload);
+        ok += 1;
       } catch (err: any) {
-        error = String(err?.message ?? err).slice(0, 300);
+        lastError = String(err?.message ?? err).slice(0, 300);
       }
     }
+    // Fan-out row: succeed if *any* target delivered (a single dead push
+    // endpoint must not mark a delivered notification as failed). Only fail
+    // when every target failed; keep the last error for observability. A row
+    // with no targets left (e.g. all subscriptions removed) has nothing to
+    // deliver and is not a failure.
+    const delivered = ok > 0 || targets.length === 0;
     await prisma.notificationLog.update({
       where: { id: row.id },
       data: {
-        status: error ? "failed" : "sent",
-        error,
+        status: delivered ? "sent" : "failed",
+        error: delivered ? null : lastError,
         attempts: { increment: 1 },
-        sentAt: error ? null : new Date(),
+        sentAt: delivered ? new Date() : null,
       } as Prisma.NotificationLogUpdateInput,
     });
     flushed += 1;

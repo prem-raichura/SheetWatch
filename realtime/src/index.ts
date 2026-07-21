@@ -13,6 +13,16 @@ function hub(env: Env): DurableObjectStub {
   return env.HUB.get(env.HUB.idFromName("global"));
 }
 
+// Constant-time string compare for the server-to-server shared secret — avoids
+// leaking REALTIME_SECRET via response timing. (Workers has no node crypto, so
+// this is a length-checked byte XOR loop.)
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -42,7 +52,7 @@ export default {
 
     // Server → worker publish. Shared-secret header; server-to-server only.
     if (url.pathname === "/notify" && request.method === "POST") {
-      if (request.headers.get("X-Realtime-Secret") !== env.REALTIME_SECRET) {
+      if (!safeEqual(request.headers.get("X-Realtime-Secret") ?? "", env.REALTIME_SECRET)) {
         return new Response("unauthorized", { status: 401 });
       }
       const body = await request.text();

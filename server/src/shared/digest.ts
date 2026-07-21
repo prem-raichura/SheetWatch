@@ -1,5 +1,7 @@
 import prisma from "./prisma";
 import { sendEmail, escapeHtml } from "./notify/email";
+import { mergePrefs } from "./prefs";
+import { localHourWeekday } from "./quietHours";
 
 // Minimum gap between digests — slightly under the nominal period so a
 // digest that fired at 8:03 still fires at 8:00 the next day/week.
@@ -13,12 +15,21 @@ const MIN_GAP_MS: Record<string, number> = {
 export async function sendDueDigests(now = new Date()): Promise<number> {
   const users = await prisma.user.findMany({
     where: { digest: { in: ["daily", "weekly"] } },
-    select: { id: true, email: true, digest: true, digestHour: true, lastDigestAt: true },
+    select: {
+      id: true,
+      email: true,
+      digest: true,
+      digestHour: true,
+      lastDigestAt: true,
+      prefs: true,
+    },
   });
 
   let sent = 0;
   for (const user of users) {
-    if (now.getHours() !== user.digestHour) continue;
+    // digestHour is the user's intended *local* hour — compare in their timezone.
+    const tz = mergePrefs(user.prefs).notifications.timezone;
+    if (localHourWeekday(now, tz).hour !== user.digestHour) continue;
     const gap = MIN_GAP_MS[user.digest];
     if (user.lastDigestAt && now.getTime() - user.lastDigestAt.getTime() < gap) continue;
 

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { timingSafeEqual } from "crypto";
 import prisma from "../../shared/prisma";
 import { pollSheet, notifySheetChange } from "../../shared/poll";
 import { sendDueDigests } from "../../shared/digest";
@@ -8,13 +9,21 @@ import { sendDueReports } from "../../shared/reports";
 
 const router = Router();
 
+// Constant-time bearer-token check — avoids leaking CRON_SECRET via response
+// timing. Length is compared first (timingSafeEqual throws on length mismatch).
+function authorized(header: string | undefined, secret: string): boolean {
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const got = Buffer.from(header ?? "");
+  return got.length === expected.length && timingSafeEqual(got, expected);
+}
+
 // Vercel Cron entry point. Vercel invokes this with
 // `Authorization: Bearer ${CRON_SECRET}` (set CRON_SECRET in the project env).
 // Polls every sheet that is due (lastCheckedAt older than its pollInterval)
 // and sends notifications inline — no Redis/BullMQ needed on Vercel.
 router.get("/poll", async (req, res) => {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+  if (!secret || !authorized(req.headers.authorization, secret)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

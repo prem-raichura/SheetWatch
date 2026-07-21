@@ -22,6 +22,44 @@ function localMinutes(now: Date, timezone: string): number | null {
   }
 }
 
+// User-local hour (0-23) and weekday (0=Sun … 6=Sat) for `now` in the given
+// IANA timezone. Empty/invalid timezone → the server's local clock, which
+// preserves the historical scheduling behaviour for users who never set a
+// timezone preference. Shared by digest + report scheduling so there is a
+// single timezone code path.
+export function localHourWeekday(
+  now: Date,
+  timezone: string
+): { hour: number; weekday: number } {
+  const weekdayIndex: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        hour12: false,
+        weekday: "short",
+      }).formatToParts(now);
+      const hour = Number(parts.find((p) => p.type === "hour")?.value);
+      const weekday = weekdayIndex[parts.find((p) => p.type === "weekday")?.value ?? ""];
+      if (!Number.isNaN(hour) && weekday !== undefined) {
+        return { hour: hour % 24, weekday };
+      }
+    } catch {
+      // fall through to server-local
+    }
+  }
+  return { hour: now.getHours(), weekday: now.getDay() };
+}
+
 function parseHHMM(s: string): number | null {
   const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(s);
   if (!m) return null;

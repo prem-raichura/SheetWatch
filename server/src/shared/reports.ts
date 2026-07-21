@@ -3,6 +3,8 @@ import { computeKpis, type ComputedKpi } from "./kpi";
 import { csvRow } from "./csv";
 import { sendEmail, type EmailAttachment } from "./notify/email";
 import { buildPdf } from "./pdf";
+import { mergePrefs } from "./prefs";
+import { localHourWeekday } from "./quietHours";
 
 export interface ReportData {
   period: { from: Date; to: Date };
@@ -26,14 +28,18 @@ const MIN_GAP_MS: Record<string, number> = {
 };
 
 // Pure due-check: hour gate (like digestHour), weekly day gate, min-gap.
+// `hour` and `dayOfWeek` are the user's intended *local* values, so both gates
+// are evaluated in the user's timezone (empty tz falls back to UTC).
 export function reportIsDue(
   report: { cadence: string; dayOfWeek: number; hour: number; lastSentAt: Date | null },
-  now: Date
+  now: Date,
+  timezone = ""
 ): boolean {
   const gap = MIN_GAP_MS[report.cadence];
   if (!gap) return false;
-  if (now.getHours() !== report.hour) return false;
-  if (report.cadence === "weekly" && now.getUTCDay() !== report.dayOfWeek) return false;
+  const { hour, weekday } = localHourWeekday(now, timezone);
+  if (hour !== report.hour) return false;
+  if (report.cadence === "weekly" && weekday !== report.dayOfWeek) return false;
   if (report.lastSentAt && now.getTime() - report.lastSentAt.getTime() < gap) return false;
   return true;
 }
@@ -126,12 +132,13 @@ export async function buildReportAttachments(
 export async function sendDueReports(now = new Date()): Promise<number> {
   const reports = await prisma.scheduledReport.findMany({
     where: { enabled: true },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { email: true, prefs: true } } },
   });
 
   let sent = 0;
   for (const report of reports) {
-    if (!reportIsDue(report, now)) continue;
+    const tz = mergePrefs(report.user.prefs).notifications.timezone;
+    if (!reportIsDue(report, now, tz)) continue;
 
     const since =
       report.lastSentAt ?? new Date(now.getTime() - (CADENCE_MS[report.cadence] ?? CADENCE_MS.weekly));

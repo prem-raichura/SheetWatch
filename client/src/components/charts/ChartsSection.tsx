@@ -120,6 +120,7 @@ export default function ChartsSection() {
     if (!over || active.id === over.id) return;
     const from = widgets.findIndex((w) => w.id === active.id);
     const to = widgets.findIndex((w) => w.id === over.id);
+    if (from === -1 || to === -1) return;
     const next = arrayMove(widgets, from, to);
     setWidgets(next);
     api.post("/api/charts/reorder", { ids: next.map((w) => w.id) }).catch(() => {

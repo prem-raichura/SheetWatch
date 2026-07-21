@@ -6,7 +6,7 @@ import {
   matchesRules,
   type AlertRulesV2,
 } from "../rules";
-import { isQuiet, nextQuietEnd } from "../quietHours";
+import { isQuiet, nextQuietEnd, localHourWeekday } from "../quietHours";
 import { planDelivery } from "../notify/dispatch";
 import { thresholdState } from "../kpi";
 import { DEFAULT_PREFS, type UserPrefs } from "../prefs";
@@ -207,6 +207,24 @@ describe("quiet hours", () => {
   it("computes the next window end", () => {
     const end = nextQuietEnd(quiet, "UTC", nightUTC);
     expect(end.toISOString()).toBe("2026-07-14T07:00:00.000Z");
+  });
+});
+
+describe("localHourWeekday", () => {
+  // 2026-07-14T05:15:00Z: Tue 05:15 in UTC, Mon 22:15 in Los Angeles.
+  const utc = new Date("2026-07-14T05:15:00Z");
+
+  it("returns hour/weekday in the given timezone", () => {
+    expect(localHourWeekday(utc, "UTC")).toEqual({ hour: 5, weekday: 2 });
+    expect(localHourWeekday(utc, "America/Los_Angeles")).toEqual({ hour: 22, weekday: 1 });
+  });
+
+  it("falls back to server-local for empty/invalid timezone", () => {
+    expect(localHourWeekday(utc, "")).toEqual({ hour: utc.getHours(), weekday: utc.getDay() });
+    expect(localHourWeekday(utc, "Not/AZone")).toEqual({
+      hour: utc.getHours(),
+      weekday: utc.getDay(),
+    });
   });
 });
 

@@ -77,6 +77,24 @@ describe("reportIsDue", () => {
     ).toBe(true);
     expect(isMonday).toBe(true);
   });
+
+  it("gates the hour in the user's timezone", () => {
+    // 2026-07-14T15:15:00Z is 08:15 in America/Los_Angeles (PDT, UTC-7).
+    const utc = new Date("2026-07-14T15:15:00Z");
+    expect(reportIsDue(base, utc, "America/Los_Angeles")).toBe(true);
+    // Same instant is 17:15 in Europe/Berlin — hour 8 must not fire there.
+    expect(reportIsDue(base, utc, "Europe/Berlin")).toBe(false);
+  });
+
+  it("gates the weekly day in the user's timezone", () => {
+    // 2026-07-14T05:15:00Z is Mon 22:15 in Los Angeles but already Tue in UTC.
+    const utc = new Date("2026-07-14T05:15:00Z");
+    const laWeekly = { ...base, cadence: "weekly", hour: 22 };
+    // Monday (day 1) in LA local time → due.
+    expect(reportIsDue({ ...laWeekly, dayOfWeek: 1 }, utc, "America/Los_Angeles")).toBe(true);
+    // Tuesday (day 2) config → not due for the same (Monday-local) instant.
+    expect(reportIsDue({ ...laWeekly, dayOfWeek: 2 }, utc, "America/Los_Angeles")).toBe(false);
+  });
 });
 
 describe("extractChartData", () => {

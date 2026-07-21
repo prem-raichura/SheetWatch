@@ -50,10 +50,12 @@ export default function ActivityTab() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Viewing this tab clears the unread badge.
+  // Viewing this tab clears the unread badge — once data has loaded, not on
+  // every subsequent poll/realtime refresh of `changes`.
   useEffect(() => {
     if (!loading) markSeen();
-  }, [loading, changes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const toggle = (id: string) => setOpen((o) => ({ ...o, [id]: !o[id] }));
 
