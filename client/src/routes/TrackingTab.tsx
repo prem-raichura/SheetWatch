@@ -3,9 +3,8 @@ import { Link } from "react-router-dom";
 import { GripVertical, LayoutGrid, List } from "lucide-react";
 import {
   DndContext,
-  DragOverlay,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useDroppable,
   useSensor,
   useSensors,
@@ -71,10 +70,14 @@ function SortableSheet({
     id: sheet.id,
     data: { type: "sheet", container },
   });
+  // Match the dashboard "edit layout" dragger: the row itself moves under the
+  // cursor (no DragOverlay ghost), lifted and on top while dragging.
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 10 : undefined,
+    position: isDragging ? ("relative" as const) : undefined,
   };
   const grip = (
     <button
@@ -167,6 +170,10 @@ export default function TrackingTab() {
 
   const [board, setBoard] = useState<Board>({});
   const [activeSheetId, setActiveSheetId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  // Local, reorderable mirror of the server project order so a drag shifts
+  // live and survives the drop (server order syncs back via the effect below).
+  const [orderedProjects, setOrderedProjects] = useState<Project[]>([]);
   const dragSource = useRef<string | null>(null);
 
   const refetchAll = () => {
@@ -180,10 +187,23 @@ export default function TrackingTab() {
 
   // Server order is the source of truth; rebuild the board whenever it changes
   // and we're not mid-drag.
+  // Rebuild the board only when the underlying data actually changes (a real
+  // refetch). Deliberately NOT keyed on activeSheetId: clearing it at drop must
+  // not re-run this and clobber the optimistic reorder with the stale (pre-save)
+  // sheet order. The guard still skips rebuilds from refetches that land mid-drag.
   useEffect(() => {
     if (activeSheetId) return;
     setBoard(buildBoard(sheets, projects));
-  }, [sheets, projects, activeSheetId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheets, projects]);
+
+  // Same contract for the project order mirror: adopt server order on refetch,
+  // but never clobber an in-progress project drag.
+  useEffect(() => {
+    if (activeProjectId) return;
+    setOrderedProjects(projects);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]);
 
   const countOf = (container: string) => (board[container] ?? []).length;
 
@@ -229,6 +249,10 @@ export default function TrackingTab() {
   };
 
   const onDragStart = (e: DragStartEvent) => {
+    if (e.active.data.current?.type === "project") {
+      setActiveProjectId(e.active.id as string);
+      return;
+    }
     if (e.active.data.current?.type !== "sheet") return;
     setActiveSheetId(e.active.id as string);
     dragSource.current = (e.active.data.current.container as string) ?? null;
@@ -275,7 +299,11 @@ export default function TrackingTab() {
       const ids = [...(prev[container] ?? [])];
       const oldIndex = ids.indexOf(active.id as string);
       const overIsSheet = over.data.current?.type === "sheet";
-      const newIndex = overIsSheet ? ids.indexOf(over.id as string) : ids.length - 1;
+      // Dropping on the container background (not a row) must keep the sheet
+      // where it already sits — cross-container hops are placed live in
+      // onDragOver, so falling back to the last index would wrongly jump the
+      // item to the end.
+      const newIndex = overIsSheet ? ids.indexOf(over.id as string) : oldIndex;
       const next = {
         ...prev,
         [container]:
@@ -287,14 +315,35 @@ export default function TrackingTab() {
     });
   };
 
+  // Which project does a drop target belong to? closestCorners/closestCenter
+  // often resolves `over` to a sheet row or a container droppable inside the
+  // target project rather than the project section itself, so map those back.
+  const projectIdForOver = (over: DragEndEvent["over"]): string | null => {
+    if (!over) return null;
+    const id = String(over.id);
+    const has = (pid: string) => orderedProjects.some((p) => p.id === pid);
+    if (has(id)) return id;
+    const container = over.data?.current?.container as string | undefined;
+    if (container && has(container)) return container;
+    if (id.startsWith("container:")) {
+      const c = id.slice("container:".length);
+      return has(c) ? c : null;
+    }
+    const sheetProject = sheetById.get(id)?.projectId;
+    return sheetProject && has(sheetProject) ? sheetProject : null;
+  };
+
   const onProjectDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const from = projects.findIndex((p) => p.id === active.id);
-    const to = projects.findIndex((p) => p.id === over.id);
+    setActiveProjectId(null);
+    const overId = projectIdForOver(over);
+    if (!overId || overId === active.id) return;
+    const from = orderedProjects.findIndex((p) => p.id === active.id);
+    const to = orderedProjects.findIndex((p) => p.id === overId);
     if (from === -1 || to === -1) return;
-    const next = arrayMove(projects, from, to);
-    api.post("/api/projects/reorder", { ids: next.map((p) => p.id) }).then(refetchProjects, () => {
+    const next = arrayMove(orderedProjects, from, to);
+    setOrderedProjects(next); // optimistic: shift stays after drop
+    api.post("/api/projects/reorder", { ids: next.map((p) => p.id) }).catch(() => {
       toast.error("Couldn’t reorder projects");
       refetchProjects();
     });
@@ -450,16 +499,17 @@ export default function TrackingTab() {
       </section>
     ) : null;
 
-  const activeSheet = activeSheetId ? sheetById.get(activeSheetId) : null;
-
   const groups = (
     <div className="space-y-8">
       {draggableProjects ? (
-        <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-8">{projects.map((p) => showProject(p))}</div>
+        <SortableContext
+          items={orderedProjects.map((p) => p.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-8">{orderedProjects.map((p) => showProject(p))}</div>
         </SortableContext>
       ) : (
-        projects.map((p) => showProject(p))
+        orderedProjects.map((p) => showProject(p))
       )}
       {showUngrouped}
     </div>
@@ -533,25 +583,12 @@ export default function TrackingTab() {
           {dndEnabled ? (
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCorners}
+              collisionDetection={closestCenter}
               onDragStart={onDragStart}
               onDragOver={onDragOver}
               onDragEnd={onDragEnd}
             >
               {groups}
-              <DragOverlay>
-                {activeSheet ? (
-                  view === "list" ? (
-                    <div className="rounded-2xl border border-line bg-surface shadow-pop">
-                      <SheetListRow sheet={activeSheet} projects={projects} onUpdated={() => {}} />
-                    </div>
-                  ) : (
-                    <div className="opacity-90">
-                      <SheetRow sheet={activeSheet} projects={projects} onUpdated={() => {}} />
-                    </div>
-                  )
-                ) : null}
-              </DragOverlay>
             </DndContext>
           ) : (
             groups
