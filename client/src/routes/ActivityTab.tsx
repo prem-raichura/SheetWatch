@@ -11,7 +11,7 @@ import ChangeContext from "../components/ChangeContext";
 import BlurFade from "../components/magic/BlurFade";
 import ViewToggle from "../components/ViewToggle";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { API_BASE } from "../lib/api";
 
 type TrackFilter = "tracked" | "untracked";
 

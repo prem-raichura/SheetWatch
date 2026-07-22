@@ -26,7 +26,7 @@ export interface UserPrefs {
     timezone: string; // IANA or ""
   };
   time: { hour12: boolean; relative: boolean };
-  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity";
+  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/compare";
   views: {
     tracking: "cards" | "list";
     sheets: "list" | "cards";
@@ -62,7 +62,7 @@ const DENSITIES = ["comfortable", "compact"] as const;
 const FONT_SCALES = ["sm", "md", "lg"] as const;
 const ANIMATIONS = ["full", "reduced", "off"] as const;
 const SOUNDS = ["off", "chime", "pop"] as const;
-const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity"] as const;
+const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity", "/compare"] as const;
 const TRACKING_VIEWS = ["cards", "list"] as const;
 const SHEETS_VIEWS = ["list", "cards"] as const;
 const ACTIVITY_VIEWS = ["timeline", "table"] as const;

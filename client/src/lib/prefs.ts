@@ -23,7 +23,7 @@ export interface UserPrefs {
     timezone: string;
   };
   time: { hour12: boolean; relative: boolean };
-  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity";
+  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/compare";
   views: {
     tracking: "cards" | "list";
     sheets: "list" | "cards";

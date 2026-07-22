@@ -1,0 +1,3 @@
+# Local dev secret for the realtime worker. Must match the server's
+# REALTIME_SECRET. For production set it with: npx wrangler secret put REALTIME_SECRET
+REALTIME_SECRET=devsecret

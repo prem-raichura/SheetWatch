@@ -1,20 +1,17 @@
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { m } from "motion/react";
+import { useScrollLock } from "../hooks/useScrollLock";
 
 const SCRIM = "fixed inset-0 z-[100] flex bg-black/50 backdrop-blur-[3px]";
 
-// Lock body scroll + close on Escape while a modal is mounted.
+// Lock body scroll (ref-counted, stack-safe) + close on Escape while mounted.
 function useModalEffects(onClose: () => void) {
+  useScrollLock();
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", h);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", h);
-    };
+    return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 }
 

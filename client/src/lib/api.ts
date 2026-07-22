@@ -1,7 +1,9 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+// Base URL for the API. Exported so places that need a raw URL (download links,
+// service-worker fetch, EventSource) don't re-read the env var.
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(BASE + path, {
+  const res = await fetch(API_BASE + path, {
     ...options,
     credentials: "include",
     headers: {

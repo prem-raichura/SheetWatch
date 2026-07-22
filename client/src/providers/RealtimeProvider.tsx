@@ -32,7 +32,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       onStatus: setStatus,
       onEvent: (event: RealtimeEvent) => {
         window.dispatchEvent(new CustomEvent(REALTIME_EVENT, { detail: event }));
-        if (event.kind === "kpi-alert") {
+        if (event.kind === "kpi-alert" || event.kind === "suggestions") {
           toastRef.current.info(`${event.label}: ${event.summary}`);
         } else {
           toastRef.current.info(`${event.label} changed`);

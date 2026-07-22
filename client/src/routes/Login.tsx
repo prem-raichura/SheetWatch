@@ -1,7 +1,7 @@
 import BrandMark from "../components/BrandMark";
 import PulseDot from "../components/PulseDot";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { API_BASE } from "../lib/api";
 
 export default function Login() {
   const params = new URLSearchParams(window.location.search);

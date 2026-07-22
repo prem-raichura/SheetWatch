@@ -10,6 +10,7 @@ import { User } from "../types";
 import { logout } from "../lib/auth";
 import { usePushPermission } from "../hooks/usePushPermission";
 import { useChanges } from "../hooks/useChanges";
+import { useComparePending } from "../hooks/useComparePending";
 import { getLastSeen, SEEN_EVENT } from "../lib/lastSeen";
 import BrandMark from "./BrandMark";
 import PulseDot from "./PulseDot";
@@ -25,6 +26,7 @@ const tabs = [
   { to: "/sheets", label: "Sheets" },
   { to: "/tracking", label: "Tracking" },
   { to: "/activity", label: "Activity" },
+  { to: "/compare", label: "Compare" },
 ];
 
 export default function AppLayout({ user }: Props) {
@@ -34,6 +36,7 @@ export default function AppLayout({ user }: Props) {
   const { status } = useRealtime();
   const live = status === "connected";
   const { changes } = useChanges();
+  const comparePending = useComparePending();
   const [lastSeen, setLastSeen] = useState(getLastSeen);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const themeButtonRef = useRef<HTMLButtonElement>(null);
@@ -196,6 +199,11 @@ export default function AppLayout({ user }: Props) {
                     {t.to === "/activity" && unread > 0 && (
                       <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 font-mono text-[10px] font-bold leading-none text-destructive-foreground">
                         {unread > 9 ? "9+" : unread}
+                      </span>
+                    )}
+                    {t.to === "/compare" && comparePending > 0 && (
+                      <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-teal px-1 font-mono text-[10px] font-bold leading-none text-primary-foreground">
+                        {comparePending > 9 ? "9+" : comparePending}
                       </span>
                     )}
                   </>

@@ -6,6 +6,7 @@ import { sendDueDigests } from "../../shared/digest";
 import { pruneSnapshots } from "../../shared/snapshots";
 import { flushQueuedNotifications } from "../../shared/notify/dispatch";
 import { sendDueReports } from "../../shared/reports";
+import { recomputeAllGroups } from "../../shared/compare";
 
 const router = Router();
 
@@ -67,6 +68,11 @@ router.get("/poll", async (req, res) => {
     console.error("Report run failed:", err?.message ?? err);
     return 0;
   });
+  // Sweep comparison groups (catches target-only edits between polls) — the
+  // no-BullMQ equivalent of the dedicated compare worker.
+  await recomputeAllGroups().catch((err) =>
+    console.error("Compare sweep failed:", err?.message ?? err)
+  );
 
   res.json({ checked: due.length, changed, failed, digests, flushed, reports });
 });

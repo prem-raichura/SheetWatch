@@ -10,6 +10,7 @@ import { digestSuppressesEmail } from "./digest";
 import { CellChange } from "./types";
 import { dispatch, safeHost, type ChannelTarget } from "./notify/dispatch";
 import { checkKpiThresholds } from "./kpi";
+import { recomputeGroupsForSheet } from "./compare";
 import { publishRealtime } from "./realtime";
 
 // Polls a single sheet. Returns the new ChangeLog id if the sheet changed,
@@ -60,6 +61,13 @@ export async function pollSheet(sheetId: string): Promise<string | null> {
     // Threshold alerts on pinned cells fire on state change, not every poll.
     await checkKpiThresholds(sheet, rows).catch((err) =>
       console.error(`KPI threshold check failed for ${sheetId}:`, err?.message ?? err)
+    );
+
+    // Re-diff any comparison groups referencing this sheet (master or target) —
+    // its stored snapshot now reflects the new values, and new suggestions
+    // notify. No-op when the sheet has no groups.
+    await recomputeGroupsForSheet(sheetId).catch((err) =>
+      console.error(`Compare recompute failed for ${sheetId}:`, err?.message ?? err)
     );
 
     // Nudge any live UI to refetch immediately — even when notifications are

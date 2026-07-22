@@ -8,7 +8,7 @@ import { publishRealtime } from "./realtime";
 
 // Absolute A1 cell ("B4") → value in the watched grid, which starts at the
 // range's first cell. Returns null when the cell is outside the grid.
-export function cellValue(rows: string[][], cell: string, range: string): string | null {
+function cellValue(rows: string[][], cell: string, range: string): string | null {
   const m = /^([A-Za-z]{1,3})(\d+)$/.exec(cell.trim());
   if (!m) return null;
   const col = columnToIndex(m[1]) - rangeStartColumn(range);

@@ -6,6 +6,7 @@ import { Sheet } from "../types";
 import { useToast } from "./Toast";
 import { useTheme } from "../providers/ThemeProvider";
 import { usePrefs } from "../providers/PrefsProvider";
+import { useScrollLock } from "../hooks/useScrollLock";
 
 interface Props {
   onClose: () => void;
@@ -44,14 +45,10 @@ export default function CommandPalette({ onClose }: Props) {
   const { isDark, toggleTheme } = useTheme();
   const { prefs, update } = usePrefs();
 
+  useScrollLock();
   useEffect(() => {
     inputRef.current?.focus();
     api.get<Sheet[]>("/api/sheets").then(setSheets).catch(() => {});
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
   }, []);
 
   const items = useMemo<Item[]>(() => {

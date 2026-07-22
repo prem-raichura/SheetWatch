@@ -518,7 +518,10 @@ router.post("/:id/check", requireAuth, async (req, res) => {
     return;
   }
   // One-off poll now: queued when a worker is running, inline otherwise.
-  await checkSheetNow(sheet.id);
+  // Fire-and-forget — an inline poll failure must not fail the request.
+  checkSheetNow(sheet.id).catch((err) =>
+    console.error(`checkSheetNow(${sheet.id}) failed:`, err?.message ?? err)
+  );
   res.json({ ok: true });
 });
 

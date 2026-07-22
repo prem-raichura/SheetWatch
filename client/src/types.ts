@@ -5,6 +5,40 @@ export interface User {
   createdAt: string;
   digest?: "off" | "daily" | "weekly";
   digestHour?: number;
+  sheetsWrite?: boolean; // granted the read-write Sheets scope
+}
+
+export interface CompareSheetRef {
+  id: string;
+  label: string;
+}
+
+export interface CompareGroup {
+  id: string;
+  name: string;
+  enabled: boolean;
+  keyColumn: string | null;
+  compareColumns: string[];
+  master: CompareSheetRef;
+  targets: CompareSheetRef[];
+  pendingCount: number;
+  conflictCount: number;
+  createdAt: string;
+}
+
+export type SuggestionStatus = "pending" | "applied" | "ignored" | "failed";
+
+export interface CompareSuggestion {
+  id: string;
+  target: CompareSheetRef;
+  keyValue: string;
+  column: string;
+  masterValue: string;
+  targetValue: string;
+  status: SuggestionStatus;
+  conflict: boolean;
+  error: string | null;
+  createdAt: string;
 }
 
 export type WebhookKind = "slack" | "discord" | "generic" | "telegram";

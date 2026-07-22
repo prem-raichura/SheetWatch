@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, API_BASE } from "../lib/api";
 import { ChangeLog } from "../types";
 import { SkeletonRows } from "../components/Skeleton";
 import ChangeContext from "../components/ChangeContext";
 import TimeTravel from "../components/TimeTravel";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export default function SheetDetail() {
   const { id } = useParams<{ id: string }>();

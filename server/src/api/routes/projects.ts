@@ -135,9 +135,10 @@ router.post("/:id/bulk", requireAuth, async (req, res) => {
     return;
   }
 
-  // check: one-off poll for every non-paused sheet in the project.
+  // check: one-off poll for every non-paused sheet in the project. Fire-and-
+  // forget — a single inline poll failure must not fail the whole request.
   const active = sheets.filter((s) => !s.paused);
-  await Promise.all(active.map((s) => checkSheetNow(s.id)));
+  await Promise.allSettled(active.map((s) => checkSheetNow(s.id)));
   res.json({ affected: active.length });
 });
 

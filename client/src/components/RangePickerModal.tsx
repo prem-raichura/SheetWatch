@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../lib/api";
+import { indexToColumn as colLetter } from "../lib/grid";
 import { ModalShell } from "./Modal";
 import { SkeletonRows } from "./Skeleton";
 
@@ -14,7 +15,6 @@ type Sel = { r: number; c: number };
 type Mode = "cell" | "col" | "row";
 
 const COLS = 26;
-const colLetter = (i: number) => String.fromCharCode(65 + i);
 
 export default function RangePickerModal({ sheetId, tab, onPick, onClose }: Props) {
   const [rows, setRows] = useState<string[][]>([]);

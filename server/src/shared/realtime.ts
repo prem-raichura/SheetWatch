@@ -3,9 +3,10 @@
 // (30s polling), so this never blocks or breaks the poll path.
 
 export interface RealtimeEvent {
-  kind: "change" | "kpi-alert";
+  kind: "change" | "kpi-alert" | "suggestions";
   sheetId?: string;
   changeLogId?: string;
+  groupId?: string;
   label: string;
   summary: string;
 }

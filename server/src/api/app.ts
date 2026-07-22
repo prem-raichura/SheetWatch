@@ -18,6 +18,7 @@ import reportsRouter from "./routes/reports";
 import sharesRouter from "./routes/shares";
 import publicRouter from "./routes/public";
 import realtimeRouter from "./routes/realtime";
+import compareRouter from "./routes/compare";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api/charts", chartsRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/shares", sharesRouter);
 app.use("/api/realtime", realtimeRouter);
+app.use("/api/compare", compareRouter);
 app.use("/public", publicRouter);
 
 export default app;

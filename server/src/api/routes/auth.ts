@@ -7,14 +7,25 @@ import { requireAuth } from "../middleware/requireAuth";
 
 const router = Router();
 
+// Read-write Sheets scope: reading covers watching/diffing; writing is needed
+// to apply accepted cross-sheet suggestions back into target sheets.
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+
 const SCOPES = [
-  "https://www.googleapis.com/auth/spreadsheets.readonly",
+  SHEETS_SCOPE,
   // Full Drive scope: read-only covers listing/watching, but moving a
   // spreadsheet to trash from the Sheets page needs write access.
   "https://www.googleapis.com/auth/drive",
   "email",
   "profile",
 ];
+
+// True when the granted scopes include full (read-write) Sheets access.
+// tokens.scope is a space-delimited string; the read-only scope is a different
+// URL, so an exact-token check avoids treating readonly as write.
+function grantedSheetsWrite(scope: string | null | undefined): boolean {
+  return (scope ?? "").split(" ").includes(SHEETS_SCOPE);
+}
 
 function makeOAuth2Client() {
   return new google.auth.OAuth2(
@@ -63,6 +74,8 @@ router.get("/google/callback", async (req, res) => {
     if (!profile.id || !profile.email) throw new Error("Missing profile data");
     if (!tokens.access_token) throw new Error("No access token returned");
 
+    const sheetsWrite = grantedSheetsWrite(tokens.scope);
+
     const user = await prisma.user.upsert({
       where: { googleId: profile.id },
       create: {
@@ -71,12 +84,14 @@ router.get("/google/callback", async (req, res) => {
         accessToken: encrypt(tokens.access_token),
         refreshToken: encrypt(tokens.refresh_token ?? ""),
         tokenExpiry: new Date(tokens.expiry_date ?? Date.now() + 3600_000),
+        sheetsWrite,
       },
       update: {
         email: profile.email,
         accessToken: encrypt(tokens.access_token),
         ...(tokens.refresh_token && { refreshToken: encrypt(tokens.refresh_token) }),
         tokenExpiry: new Date(tokens.expiry_date ?? Date.now() + 3600_000),
+        sheetsWrite,
       },
     });
 
@@ -92,7 +107,7 @@ router.get("/me", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, googleId: true, createdAt: true, digest: true, digestHour: true },
+    select: { id: true, email: true, googleId: true, createdAt: true, digest: true, digestHour: true, sheetsWrite: true },
   });
   if (!user) {
     res.status(401).json({ error: "User not found" });
@@ -123,7 +138,7 @@ router.patch("/me", requireAuth, async (req, res) => {
       ...(digest !== undefined && { digest }),
       ...(digestHour !== undefined && { digestHour }),
     },
-    select: { id: true, email: true, googleId: true, createdAt: true, digest: true, digestHour: true },
+    select: { id: true, email: true, googleId: true, createdAt: true, digest: true, digestHour: true, sheetsWrite: true },
   });
   res.json(user);
 });

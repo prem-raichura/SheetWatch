@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+import { API_BASE } from "./api";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -22,7 +22,7 @@ export async function subscribeToPush(): Promise<void> {
   });
 
   const json = sub.toJSON();
-  await fetch(`${BASE}/api/push/subscribe`, {
+  await fetch(`${API_BASE}/api/push/subscribe`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -39,7 +39,7 @@ export async function unsubscribeFromPush(): Promise<void> {
   const endpoint = sub.endpoint;
   await sub.unsubscribe();
 
-  await fetch(`${BASE}/api/push/subscribe`, {
+  await fetch(`${API_BASE}/api/push/subscribe`, {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
