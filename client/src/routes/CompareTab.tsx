@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GitCompareArrows, Plus, Play, Check, X, AlertTriangle, Trash2, Pencil } from "lucide-react";
-import { useSheets } from "../hooks/useSheets";
 import { useCompare, fetchSuggestions } from "../hooks/useCompare";
 import { API_BASE } from "../lib/api";
 import ComparisonModal from "../components/compare/ComparisonModal";
@@ -18,8 +17,15 @@ const STATUS_TABS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
+// Compact "time ago" for the auto-check caption.
+function ago(iso: string, now: number): string {
+  const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  return m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
+}
+
 export default function CompareTab() {
-  const { sheets } = useSheets();
   const compare = useCompare();
   const { groups, loading } = compare;
   const toast = useToast();
@@ -36,6 +42,13 @@ export default function CompareTab() {
 
   useEffect(() => {
     getMe().then((u) => setCanWrite(u?.sheetsWrite ?? false));
+  }, []);
+
+  // Ticks every second so the "checked Xs ago" caption stays live.
+  const [nowTs, setNowTs] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
   }, []);
 
   // Default-select the first group once loaded.
@@ -178,7 +191,6 @@ export default function CompareTab() {
         </div>
         <button
           onClick={() => setModal({ open: true })}
-          disabled={sheets.length < 2}
           className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-2 text-sm font-semibold text-background shadow-xs transition-all hover:bg-foreground/85 active:scale-[0.97] disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> New comparison
@@ -202,7 +214,7 @@ export default function CompareTab() {
           <GitCompareArrows className="mx-auto h-8 w-8 text-ink-300" />
           <p className="mt-3 font-semibold text-ink-700">No comparisons yet</p>
           <p className="mt-1 text-sm text-ink-400">
-            {sheets.length < 2 ? "Track at least two sheets to compare them." : "Create one to start syncing values across sheets."}
+            Create one to start syncing values across sheets.
           </p>
         </div>
       ) : (
@@ -276,6 +288,14 @@ export default function CompareTab() {
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
+
+              <p className="flex items-center gap-1.5 text-[11px] text-ink-400">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal" />
+                Auto-checks every 2 min
+                {selected.lastCheckedAt
+                  ? ` · last checked ${ago(selected.lastCheckedAt, nowTs)}`
+                  : " · not checked yet"}
+              </p>
 
               {/* Bulk bar */}
               {status === "pending" && pendingIds.length > 0 && (
@@ -365,7 +385,6 @@ export default function CompareTab() {
 
       {modal.open && (
         <ComparisonModal
-          sheets={sheets}
           group={modal.group}
           onClose={() => setModal({ open: false })}
           onSave={async (g) => {

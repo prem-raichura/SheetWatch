@@ -21,7 +21,8 @@ export interface UserPrefs {
     sheets: { columns: string[] };
   };
   notifications: {
-    sound: "off" | "chime" | "pop";
+    sound: "off" | "chime" | "pop" | "ping" | "bell" | "blip"; // tracked-sheet changes + KPI alerts
+    compareSound: "off" | "chime" | "pop" | "ping" | "bell" | "blip"; // new compare suggestions
     quietHours: { enabled: boolean; start: string; end: string }; // HH:MM 24h
     timezone: string; // IANA or ""
   };
@@ -61,7 +62,7 @@ const THEMES = ["light", "dark", "system"] as const;
 const DENSITIES = ["comfortable", "compact"] as const;
 const FONT_SCALES = ["sm", "md", "lg"] as const;
 const ANIMATIONS = ["full", "reduced", "off"] as const;
-const SOUNDS = ["off", "chime", "pop"] as const;
+const SOUNDS = ["off", "chime", "pop", "ping", "bell", "blip"] as const;
 const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity", "/compare"] as const;
 const TRACKING_VIEWS = ["cards", "list"] as const;
 const SHEETS_VIEWS = ["list", "cards"] as const;
@@ -90,6 +91,7 @@ export const DEFAULT_PREFS: UserPrefs = {
   },
   notifications: {
     sound: "off",
+    compareSound: "off",
     quietHours: { enabled: false, start: "22:00", end: "07:00" },
     timezone: "",
   },
@@ -171,6 +173,7 @@ export function mergePrefs(stored: unknown): UserPrefs {
     },
     notifications: {
       sound: pickEnum(nt.sound, SOUNDS, d.notifications.sound),
+      compareSound: pickEnum(nt.compareSound, SOUNDS, d.notifications.compareSound),
       quietHours: {
         enabled:
           typeof qh.enabled === "boolean" ? qh.enabled : d.notifications.quietHours.enabled,
@@ -338,6 +341,10 @@ export function applyPrefsPatch(
             case "sound":
               if (!isOneOf(v, SOUNDS)) return fail(enumError("notifications.sound", SOUNDS));
               next.notifications.sound = v;
+              break;
+            case "compareSound":
+              if (!isOneOf(v, SOUNDS)) return fail(enumError("notifications.compareSound", SOUNDS));
+              next.notifications.compareSound = v;
               break;
             case "quietHours": {
               if (!isRecord(v)) return fail("notifications.quietHours must be an object");

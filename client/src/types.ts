@@ -11,6 +11,16 @@ export interface User {
 export interface CompareSheetRef {
   id: string;
   label: string;
+  spreadsheetId: string;
+  tab: string | null;
+}
+
+// A spreadsheet from the user's Google Drive, for the comparison picker.
+export interface DriveSheet {
+  spreadsheetId: string;
+  name: string;
+  ownedByMe: boolean;
+  modifiedTime: string;
 }
 
 export interface CompareGroup {
@@ -23,6 +33,7 @@ export interface CompareGroup {
   targets: CompareSheetRef[];
   pendingCount: number;
   conflictCount: number;
+  lastCheckedAt: string | null;
   createdAt: string;
 }
 
@@ -30,7 +41,7 @@ export type SuggestionStatus = "pending" | "applied" | "ignored" | "failed";
 
 export interface CompareSuggestion {
   id: string;
-  target: CompareSheetRef;
+  target: { id: string; label: string };
   keyValue: string;
   column: string;
   masterValue: string;

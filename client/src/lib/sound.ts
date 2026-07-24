@@ -1,7 +1,7 @@
 // Tiny synthesized notification sounds via WebAudio — no audio assets shipped.
 // Browsers only allow audio after a user gesture; we unlock on first pointerdown.
 
-export type SoundKind = "off" | "chime" | "pop";
+export type SoundKind = "off" | "chime" | "pop" | "ping" | "bell" | "blip";
 
 let ctx: AudioContext | null = null;
 let unlocked = false;
@@ -43,11 +43,25 @@ export function playSound(kind: SoundKind): void {
   if (!c || (!unlocked && c.state === "suspended")) return;
   if (c.state === "suspended") void c.resume();
 
-  if (kind === "chime") {
-    tone(c, 880, 0, 0.35, 0.06);
-    tone(c, 1318.5, 0.09, 0.4, 0.05);
-  } else {
-    tone(c, 420, 0, 0.12, 0.09);
-    tone(c, 210, 0.02, 0.1, 0.05);
+  switch (kind) {
+    case "chime":
+      tone(c, 880, 0, 0.35, 0.06);
+      tone(c, 1318.5, 0.09, 0.4, 0.05);
+      break;
+    case "pop":
+      tone(c, 420, 0, 0.12, 0.09);
+      tone(c, 210, 0.02, 0.1, 0.05);
+      break;
+    case "ping":
+      tone(c, 1046.5, 0, 0.2, 0.07);
+      break;
+    case "bell":
+      tone(c, 1568, 0, 0.5, 0.05);
+      tone(c, 1046.5, 0.13, 0.55, 0.04);
+      break;
+    case "blip":
+      tone(c, 660, 0, 0.08, 0.09);
+      tone(c, 990, 0.07, 0.08, 0.06);
+      break;
   }
 }

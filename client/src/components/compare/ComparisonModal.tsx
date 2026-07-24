@@ -1,26 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Table2 } from "lucide-react";
 import { ModalShell } from "../Modal";
 import { api } from "../../lib/api";
 import { indexToColumn as colLetter } from "../../lib/grid";
+import { SkeletonRows } from "../Skeleton";
 import ColumnPickerModal from "./ColumnPickerModal";
-import type { CompareGroup, Sheet } from "../../types";
+import type { CompareGroup, DriveSheet } from "../../types";
 import type { NewGroup } from "../../hooks/useCompare";
 
 interface Props {
-  sheets: Sheet[];
   group?: CompareGroup | null; // present = edit
   onClose: () => void;
   onSave: (g: NewGroup) => Promise<void>;
 }
 
-// Create/edit a comparison group: pick the master sheet, the targets to keep in
-// sync, a key column (optional) and the columns to compare. Columns are the
-// sheet's own letters (A, B, C…); letter chips make column entry click-to-fill.
-export default function ComparisonModal({ sheets, group, onClose, onSave }: Props) {
+// Create/edit a comparison group. Sheets are chosen from the user's Google
+// Drive (independent of tracking): pick one master and one or more targets,
+// then a key column (optional) and the columns to compare.
+export default function ComparisonModal({ group, onClose, onSave }: Props) {
+  const [drive, setDrive] = useState<DriveSheet[]>([]);
+  const [driveLoading, setDriveLoading] = useState(true);
+  const [query, setQuery] = useState("");
+
   const [name, setName] = useState(group?.name ?? "");
-  const [masterId, setMasterId] = useState(group?.master.id ?? sheets[0]?.id ?? "");
-  const [targetIds, setTargetIds] = useState<string[]>(group?.targets.map((t) => t.id) ?? []);
+  const [masterId, setMasterId] = useState(group?.master.spreadsheetId ?? "");
+  const [masterTab] = useState<string | null>(group?.master.tab ?? null);
+  const [targetIds, setTargetIds] = useState<string[]>(
+    group?.targets.map((t) => t.spreadsheetId) ?? []
+  );
   const [keyColumn, setKeyColumn] = useState(group?.keyColumn ?? "");
   const [compareColumns, setCompareColumns] = useState(group?.compareColumns.join(", ") ?? "");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -28,14 +35,30 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const masterTab = sheets.find((s) => s.id === masterId)?.tab ?? null;
+  // Load the user's Drive spreadsheets for the picker.
+  useEffect(() => {
+    let live = true;
+    api
+      .get<DriveSheet[]>("/api/compare/drive-sheets")
+      .then((d) => live && setDrive(d))
+      .catch(() => live && setErr("Couldn’t load your Google Drive sheets"))
+      .finally(() => live && setDriveLoading(false));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // Offer column-letter chips sized to the master's width.
   useEffect(() => {
-    if (!masterId) return;
+    if (!masterId) {
+      setHeaders([]);
+      return;
+    }
     let live = true;
     api
-      .get<{ rows: string[][] }>(`/api/sheets/${masterId}/preview?rows=1`)
+      .get<{ rows: string[][] }>(
+        `/api/compare/preview?spreadsheetId=${encodeURIComponent(masterId)}&rows=1${masterTab ? `&tab=${encodeURIComponent(masterTab)}` : ""}`
+      )
       .then((d) => {
         if (!live) return;
         const width = Math.min(Math.max((d.rows[0] ?? []).length, 8), 26);
@@ -45,7 +68,7 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
     return () => {
       live = false;
     };
-  }, [masterId]);
+  }, [masterId, masterTab]);
 
   const toggleTarget = (id: string) =>
     setTargetIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -60,6 +83,11 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
     setCompareColumns((prev) => (prev.trim() ? `${prev.trim()}, ${h}` : h));
   };
 
+  const filtered = useMemo(
+    () => drive.filter((s) => s.name.toLowerCase().includes(query.toLowerCase())),
+    [drive, query]
+  );
+
   const submit = async () => {
     setErr(null);
     if (!name.trim()) return setErr("Name is required");
@@ -71,8 +99,8 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
     try {
       await onSave({
         name: name.trim(),
-        masterSheetId: masterId,
-        targetSheetIds: targets,
+        master: { spreadsheetId: masterId, tab: masterTab },
+        targets: targets.map((id) => ({ spreadsheetId: id, tab: null })),
         keyColumn: keyColumn.trim() || null,
         compareColumns: parsedColumns,
       });
@@ -102,31 +130,57 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
             <input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Q3 roster sync" />
           </label>
 
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-ink-500">Master sheet</span>
-            <select className={input} value={masterId} onChange={(e) => setMasterId(e.target.value)}>
-              {sheets.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div>
-            <span className="mb-1 block text-xs font-semibold text-ink-500">Target sheets</span>
-            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-line bg-paper p-2">
-              {sheets.filter((s) => s.id !== masterId).length === 0 && (
-                <p className="px-1 py-2 text-xs text-ink-400">Track another sheet to compare against.</p>
+            <span className="mb-1 block text-xs font-semibold text-ink-500">
+              Sheets <span className="font-normal text-ink-400">— set one master, tick the targets</span>
+            </span>
+            <input
+              className={`${input} mb-2`}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search your Google Drive sheets…"
+            />
+            <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-paper p-2">
+              {driveLoading ? (
+                <SkeletonRows count={4} />
+              ) : filtered.length === 0 ? (
+                <p className="px-1 py-2 text-xs text-ink-400">
+                  {drive.length === 0 ? "No spreadsheets found in your Google Drive." : "No matching sheets."}
+                </p>
+              ) : (
+                filtered.map((s) => {
+                  const isMaster = masterId === s.spreadsheetId;
+                  const isTarget = !isMaster && targetIds.includes(s.spreadsheetId);
+                  return (
+                    <div key={s.spreadsheetId} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-secondary">
+                      <button
+                        type="button"
+                        onClick={() => setMasterId(isMaster ? "" : s.spreadsheetId)}
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                          isMaster
+                            ? "border-teal bg-teal text-primary-foreground"
+                            : "border-line bg-surface text-ink-500 hover:border-teal/40 hover:text-teal-600"
+                        }`}
+                        title="Use as master"
+                      >
+                        {isMaster ? "Master" : "Master?"}
+                      </button>
+                      <label className={`flex min-w-0 flex-1 items-center gap-2 ${isMaster ? "opacity-50" : "cursor-pointer"}`}>
+                        <input
+                          type="checkbox"
+                          disabled={isMaster}
+                          checked={isTarget}
+                          onChange={() => toggleTarget(s.spreadsheetId)}
+                        />
+                        <span className="truncate">{s.name}</span>
+                      </label>
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink-400">
+                        {s.ownedByMe ? "owner" : "shared"}
+                      </span>
+                    </div>
+                  );
+                })
               )}
-              {sheets
-                .filter((s) => s.id !== masterId)
-                .map((s) => (
-                  <label key={s.id} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-secondary">
-                    <input type="checkbox" checked={targetIds.includes(s.id)} onChange={() => toggleTarget(s.id)} />
-                    <span className="truncate">{s.label}</span>
-                  </label>
-                ))}
             </div>
           </div>
 
@@ -185,7 +239,7 @@ export default function ComparisonModal({ sheets, group, onClose, onSave }: Prop
 
       {pickerOpen && masterId && (
         <ColumnPickerModal
-          sheetId={masterId}
+          spreadsheetId={masterId}
           tab={masterTab}
           initialKey={keyColumn.trim() || null}
           initialColumns={parsedColumns}

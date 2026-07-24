@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import type { CompareGroup, CompareSuggestion } from "../types";
+import type { CompareGroup, CompareSuggestion, DriveSheet } from "../types";
 import { useRealtimeRefetch } from "./useRealtimeRefetch";
+
+// A sheet picked for a comparison — coordinates, not a tracked-sheet id.
+export interface SheetPick {
+  spreadsheetId: string;
+  tab?: string | null;
+  range?: string;
+}
 
 export interface NewGroup {
   name: string;
-  masterSheetId: string;
-  targetSheetIds: string[];
+  master: SheetPick;
+  targets: SheetPick[];
   keyColumn: string | null;
   compareColumns: string[];
 }
@@ -49,6 +56,9 @@ export function useCompare() {
     api.post<CompareSuggestion[]>(`/api/compare/groups/${id}/run`);
   const getColumns = (id: string) =>
     api.get<{ columns: string[] }>(`/api/compare/groups/${id}/columns`);
+  const getDriveSheets = () => api.get<DriveSheet[]>("/api/compare/drive-sheets");
+  const getTabs = (spreadsheetId: string) =>
+    api.get<{ tabs: string[] }>(`/api/compare/tabs?spreadsheetId=${encodeURIComponent(spreadsheetId)}`);
 
   const accept = (ids: string[]) =>
     api.post<ApplyResult>("/api/compare/suggestions/accept", { ids });
@@ -67,6 +77,8 @@ export function useCompare() {
     deleteGroup,
     runGroup,
     getColumns,
+    getDriveSheets,
+    getTabs,
     accept,
     acceptAll,
     ignore,

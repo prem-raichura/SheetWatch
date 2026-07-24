@@ -15,6 +15,30 @@ import { API_BASE } from "../lib/api";
 
 type TrackFilter = "tracked" | "untracked";
 
+// Calendar-day key (local time) so same-day changes group together.
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// Human date-section heading: Today / Yesterday / a dated label.
+function dayLabel(iso: string, now: Date): string {
+  const d = new Date(iso);
+  const t0 = new Date(now);
+  t0.setHours(0, 0, 0, 0);
+  const day = new Date(d);
+  day.setHours(0, 0, 0, 0);
+  const diff = Math.round((t0.getTime() - day.getTime()) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
 export default function ActivityTab() {
   const { prefs, update } = usePrefs();
   const [search, setSearch] = useState("");
@@ -59,13 +83,207 @@ export default function ActivityTab() {
 
   const toggle = (id: string) => setOpen((o) => ({ ...o, [id]: !o[id] }));
 
+  // Group the visible changes under date headings, newest day first.
+  const now = new Date();
+  const sorted = [...visible].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  const dayGroups: { key: string; label: string; items: typeof visible }[] = [];
+  for (const c of sorted) {
+    const key = dayKey(c.createdAt);
+    const last = dayGroups[dayGroups.length - 1];
+    if (last && last.key === key) last.items.push(c);
+    else dayGroups.push({ key, label: dayLabel(c.createdAt, now), items: [c] });
+  }
+
+  // Render one date group's changes in the active view (table or timeline).
+  const renderList = (list: typeof visible) =>
+    prefs.views.activity === "table" ? (
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-card">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr className="border-b border-line">
+              <th className="w-4 px-3 py-2" />
+              <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                Sheet
+              </th>
+              <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                Summary
+              </th>
+              <th className="px-3 py-2 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                When
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((c) => {
+              const isOpen = open[c.id];
+              return (
+                <>
+                  <tr
+                    key={c.id}
+                    onClick={() => toggle(c.id)}
+                    className="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-paper/60"
+                  >
+                    <td className="px-3 py-2.5">
+                      <span
+                        className={`inline-block text-ink-300 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                      >
+                        ›
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="max-w-[14rem] truncate font-display text-sm font-semibold text-ink-900">
+                          {c.sheet.label}
+                        </span>
+                        {c.sheet.archivedAt && (
+                          <span className="shrink-0 rounded bg-paper px-1 font-mono text-[9px] uppercase text-ink-400">
+                            untracked
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="max-w-0 px-3 py-2.5">
+                      <span className="block truncate font-mono text-xs text-ink-500">
+                        {c.summary}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11px] text-ink-400">
+                      {formatTimeAgo(c.createdAt, prefs.time)}
+                    </td>
+                  </tr>
+                  {isOpen && (
+                    <tr className="border-b border-line bg-paper/40">
+                      <td colSpan={4} className="px-3 py-2">
+                        <div className="divide-y divide-line">
+                          {c.details.slice(0, 15).map((d, di) => (
+                            <div
+                              key={di}
+                              className="flex items-center gap-3 px-1 py-1.5 font-mono text-xs"
+                            >
+                              <span className="shrink-0 rounded bg-card px-1.5 py-0.5 text-[10px] text-ink-400">
+                                {d.cell}
+                              </span>
+                              <span className="truncate text-coral-600 line-through">
+                                {d.before || "∅"}
+                              </span>
+                              <span className="text-ink-300">→</span>
+                              <span className="truncate text-teal-600">{d.after || "∅"}</span>
+                            </div>
+                          ))}
+                          {c.details.length > 15 && (
+                            <Link
+                              to={`/history/${c.sheetId}`}
+                              className="block px-1 py-1.5 font-mono text-[11px] text-teal-600 hover:underline"
+                            >
+                              +{c.details.length - 15} more · open history →
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <ol className="relative space-y-2 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-line">
+        {list.map((c, i) => {
+          const isOpen = open[c.id];
+          return (
+            <li key={c.id} className="relative">
+              <BlurFade delay={Math.min(i, 10) * 0.03} className="relative flex gap-4 pl-6">
+                <span className="absolute left-0 top-3.5">
+                  <PulseDot tone="alert" />
+                </span>
+                <div className="flex-1 overflow-hidden rounded-xl border border-line bg-surface shadow-card">
+                  <button
+                    onClick={() => toggle(c.id)}
+                    aria-expanded={!!isOpen}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-paper/60"
+                  >
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate font-display text-sm font-semibold text-ink-900">
+                          {c.sheet.label}
+                        </span>
+                        {c.sheet.archivedAt && (
+                          <span className="shrink-0 rounded bg-paper px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-400">
+                            untracked
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-mono text-xs text-ink-500">{c.summary}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="font-mono text-[11px] text-ink-400">
+                        {formatTimeAgo(c.createdAt, prefs.time)}
+                      </span>
+                      <span
+                        className={`text-ink-300 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                      >
+                        ›
+                      </span>
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="divide-y divide-line border-t border-line">
+                      {c.details.slice(0, 15).map((d, di) => (
+                        <div
+                          key={di}
+                          className="flex items-center gap-3 px-4 py-2 font-mono text-xs"
+                        >
+                          <span className="shrink-0 rounded bg-paper px-1.5 py-0.5 text-[10px] text-ink-400">
+                            {d.cell}
+                          </span>
+                          <span className="truncate text-coral-600 line-through">
+                            {d.before || "∅"}
+                          </span>
+                          <span className="text-ink-300">→</span>
+                          <span className="truncate text-teal-600">{d.after || "∅"}</span>
+                        </div>
+                      ))}
+                      {c.details.length > 15 && (
+                        <div className="px-4 py-2">
+                          <Link
+                            to={`/history/${c.sheetId}`}
+                            className="font-mono text-[11px] text-teal-600 hover:underline"
+                          >
+                            +{c.details.length - 15} more · open history →
+                          </Link>
+                        </div>
+                      )}
+                      <div className="px-4 py-2">
+                        <button
+                          onClick={() => setGridOpen((o) => ({ ...o, [c.id]: !o[c.id] }))}
+                          className="font-mono text-[11px] text-ink-400 transition-colors hover:text-teal-600"
+                        >
+                          {gridOpen[c.id] ? "▦ hide grid" : "▦ view in grid"}
+                        </button>
+                      </div>
+                      {gridOpen[c.id] && <ChangeContext sheetId={c.sheetId} changeId={c.id} />}
+                    </div>
+                  )}
+                </div>
+              </BlurFade>
+            </li>
+          );
+        })}
+      </ol>
+    );
+
   return (
     <div className="animate-fade-up space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-ink-900">Activity</h1>
           <p className="mt-1 text-sm text-ink-500">
-            Every change we caught. Click one to see the exact cells.
+            Every change we caught, grouped by day. Click one to see the exact cells.
           </p>
         </div>
         <a
@@ -116,185 +334,20 @@ export default function ActivityTab() {
               : "When a tracked sheet changes, it shows up here."}
           </p>
         </div>
-      ) : prefs.views.activity === "table" ? (
-        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-card">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="w-4 px-3 py-2" />
-                <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
-                  Sheet
-                </th>
-                <th className="px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
-                  Summary
-                </th>
-                <th className="px-3 py-2 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-400">
-                  When
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((c) => {
-                const isOpen = open[c.id];
-                return (
-                  <>
-                    <tr
-                      key={c.id}
-                      onClick={() => toggle(c.id)}
-                      className="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-paper/60"
-                    >
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={`inline-block text-ink-300 transition-transform ${isOpen ? "rotate-90" : ""}`}
-                        >
-                          ›
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span className="flex items-center gap-1.5">
-                          <span className="max-w-[14rem] truncate font-display text-sm font-semibold text-ink-900">
-                            {c.sheet.label}
-                          </span>
-                          {c.sheet.archivedAt && (
-                            <span className="shrink-0 rounded bg-paper px-1 font-mono text-[9px] uppercase text-ink-400">
-                              untracked
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="max-w-0 px-3 py-2.5">
-                        <span className="block truncate font-mono text-xs text-ink-500">
-                          {c.summary}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11px] text-ink-400">
-                        {formatTimeAgo(c.createdAt, prefs.time)}
-                      </td>
-                    </tr>
-                    {isOpen && (
-                      <tr className="border-b border-line bg-paper/40">
-                        <td colSpan={4} className="px-3 py-2">
-                          <div className="divide-y divide-line">
-                            {c.details.slice(0, 15).map((d, di) => (
-                              <div
-                                key={di}
-                                className="flex items-center gap-3 px-1 py-1.5 font-mono text-xs"
-                              >
-                                <span className="shrink-0 rounded bg-card px-1.5 py-0.5 text-[10px] text-ink-400">
-                                  {d.cell}
-                                </span>
-                                <span className="truncate text-coral-600 line-through">
-                                  {d.before || "∅"}
-                                </span>
-                                <span className="text-ink-300">→</span>
-                                <span className="truncate text-teal-600">{d.after || "∅"}</span>
-                              </div>
-                            ))}
-                            {c.details.length > 15 && (
-                              <Link
-                                to={`/history/${c.sheetId}`}
-                                className="block px-1 py-1.5 font-mono text-[11px] text-teal-600 hover:underline"
-                              >
-                                +{c.details.length - 15} more · open history →
-                              </Link>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       ) : (
-        <ol className="relative space-y-2 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-px before:bg-line">
-          {visible.map((c, i) => {
-            const isOpen = open[c.id];
-            return (
-              <li key={c.id} className="relative">
-              <BlurFade delay={Math.min(i, 10) * 0.03} className="relative flex gap-4 pl-6">
-                <span className="absolute left-0 top-3.5">
-                  <PulseDot tone="alert" />
+        <div className="space-y-8">
+          {dayGroups.map((g) => (
+            <section key={g.key} className="space-y-3">
+              <h2 className="sticky top-0 z-10 -mx-1 bg-background/80 px-1 py-1 font-display text-sm font-bold text-ink-500 backdrop-blur">
+                {g.label}
+                <span className="ml-2 font-mono text-[11px] font-normal text-ink-400">
+                  {g.items.length}
                 </span>
-                <div className="flex-1 overflow-hidden rounded-xl border border-line bg-surface shadow-card">
-                  <button
-                    onClick={() => toggle(c.id)}
-                    aria-expanded={!!isOpen}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-paper/60"
-                  >
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate font-display text-sm font-semibold text-ink-900">
-                          {c.sheet.label}
-                        </span>
-                        {c.sheet.archivedAt && (
-                          <span className="shrink-0 rounded bg-paper px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-400">
-                            untracked
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-mono text-xs text-ink-500">{c.summary}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="font-mono text-[11px] text-ink-400">
-                        {formatTimeAgo(c.createdAt, prefs.time)}
-                      </span>
-                      <span
-                        className={`text-ink-300 transition-transform ${
-                          isOpen ? "rotate-90" : ""
-                        }`}
-                      >
-                        ›
-                      </span>
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="divide-y divide-line border-t border-line">
-                      {c.details.slice(0, 15).map((d, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 px-4 py-2 font-mono text-xs"
-                        >
-                          <span className="shrink-0 rounded bg-paper px-1.5 py-0.5 text-[10px] text-ink-400">
-                            {d.cell}
-                          </span>
-                          <span className="truncate text-coral-600 line-through">
-                            {d.before || "∅"}
-                          </span>
-                          <span className="text-ink-300">→</span>
-                          <span className="truncate text-teal-600">{d.after || "∅"}</span>
-                        </div>
-                      ))}
-                      {c.details.length > 15 && (
-                        <div className="px-4 py-2">
-                          <Link
-                            to={`/history/${c.sheetId}`}
-                            className="font-mono text-[11px] text-teal-600 hover:underline"
-                          >
-                            +{c.details.length - 15} more · open history →
-                          </Link>
-                        </div>
-                      )}
-                      <div className="px-4 py-2">
-                        <button
-                          onClick={() => setGridOpen((o) => ({ ...o, [c.id]: !o[c.id] }))}
-                          className="font-mono text-[11px] text-ink-400 transition-colors hover:text-teal-600"
-                        >
-                          {gridOpen[c.id] ? "▦ hide grid" : "▦ view in grid"}
-                        </button>
-                      </div>
-                      {gridOpen[c.id] && <ChangeContext sheetId={c.sheetId} changeId={c.id} />}
-                    </div>
-                  )}
-                </div>
-              </BlurFade>
-              </li>
-            );
-          })}
-        </ol>
+              </h2>
+              {renderList(g.items)}
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { ModalShell } from "../Modal";
 import { SkeletonRows } from "../Skeleton";
 
 interface Props {
-  sheetId: string;
+  spreadsheetId: string;
   tab: string | null;
   initialKey: string | null;
   initialColumns: string[];
@@ -21,7 +21,7 @@ const SAMPLE_ROWS = 6;
 // its header text when present, else the column letter, matching how the server
 // resolves either form.
 export default function ColumnPickerModal({
-  sheetId,
+  spreadsheetId,
   tab,
   initialKey,
   initialColumns,
@@ -38,12 +38,12 @@ export default function ColumnPickerModal({
     setLoading(true);
     api
       .get<{ rows: string[][] }>(
-        `/api/sheets/${sheetId}/preview?rows=${SAMPLE_ROWS}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`
+        `/api/compare/preview?spreadsheetId=${encodeURIComponent(spreadsheetId)}&rows=${SAMPLE_ROWS}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`
       )
       .then((d) => setRows(d.rows ?? []))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load sheet"))
       .finally(() => setLoading(false));
-  }, [sheetId, tab]);
+  }, [spreadsheetId, tab]);
 
   const colCount = useMemo(
     () => Math.min(Math.max(1, ...rows.map((r) => r.length)), 40),

@@ -83,10 +83,6 @@ model Sheet {
   kpiWidgets   KpiWidget[]
   chartWidgets ChartWidget[]
 
-  masterOfGroups    ComparisonGroup[]  @relation("GroupMaster")
-  comparisonTargets ComparisonTarget[]
-  targetSuggestions Suggestion[]
-
   @@unique([userId, spreadsheetId])
   @@index([projectId, sortOrder])
 }
@@ -237,52 +233,57 @@ model NotificationLog {
 }
 
 model ComparisonGroup {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name           String
-  masterSheetId  String
-  masterSheet    Sheet    @relation("GroupMaster", fields: [masterSheetId], references: [id], onDelete: Cascade)
-  keyColumn      String? // header name or A1 letters; null = match by row position
-  compareColumns String[] @default([]) // headers or A1 letters to compare
-  enabled        Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  masterSpreadsheetId String
+  masterTab           String?
+  masterRange         String   @default("A1:Z1000")
+  masterLabel         String
+  keyColumn           String? // header name or A1 letters; null = match by row position
+  compareColumns      String[] @default([]) // headers or A1 letters to compare
+  enabled             Boolean  @default(true)
+  lastCheckedAt       DateTime? // when the sweep/recompute last read the sheets
+  createdAt           DateTime @default(now())
 
   targets     ComparisonTarget[]
   suggestions Suggestion[]
 
   @@index([userId])
-  @@index([masterSheetId])
 }
 
 model ComparisonTarget {
-  id      String          @id @default(cuid())
-  groupId String
-  group   ComparisonGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  sheetId String
-  sheet   Sheet           @relation(fields: [sheetId], references: [id], onDelete: Cascade)
-
-  @@unique([groupId, sheetId])
-  @@index([sheetId])
-}
-
-model Suggestion {
   id            String          @id @default(cuid())
   groupId       String
   group         ComparisonGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  targetSheetId String
-  targetSheet   Sheet           @relation(fields: [targetSheetId], references: [id], onDelete: Cascade)
-  keyValue      String // matched key (or row index as string when positional)
-  rowRef        String? // positional row hint
-  column        String // compared column (header or letters)
-  masterValue   String
-  targetValue   String
-  status        String          @default("pending") // pending | applied | ignored | failed
-  conflict      Boolean         @default(false) // target changed after suggestion raised
-  error         String?
-  createdAt     DateTime        @default(now())
-  resolvedAt    DateTime?
+  spreadsheetId String
+  tab           String?
+  range         String          @default("A1:Z1000")
+  label         String
 
-  @@unique([groupId, targetSheetId, keyValue, column])
+  suggestions Suggestion[]
+
+  @@index([groupId])
+}
+
+model Suggestion {
+  id          String           @id @default(cuid())
+  groupId     String
+  group       ComparisonGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      ComparisonTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  keyValue    String // matched key (or row index as string when positional)
+  rowRef      String? // positional row hint
+  column      String // compared column (header or letters)
+  masterValue String
+  targetValue String
+  status      String           @default("pending") // pending | applied | ignored | failed
+  conflict    Boolean          @default(false) // target changed after suggestion raised
+  error       String?
+  createdAt   DateTime         @default(now())
+  resolvedAt  DateTime?
+
+  @@unique([targetId, keyValue, column])
   @@index([groupId, status])
 }

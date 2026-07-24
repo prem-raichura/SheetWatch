@@ -18,7 +18,8 @@ export interface UserPrefs {
     sheets: { columns: string[] };
   };
   notifications: {
-    sound: "off" | "chime" | "pop";
+    sound: "off" | "chime" | "pop" | "ping" | "bell" | "blip";
+    compareSound: "off" | "chime" | "pop" | "ping" | "bell" | "blip";
     quietHours: QuietHours;
     timezone: string;
   };
@@ -73,6 +74,7 @@ export const DEFAULT_PREFS: UserPrefs = {
   },
   notifications: {
     sound: "off",
+    compareSound: "off",
     quietHours: { enabled: false, start: "22:00", end: "07:00" },
     timezone: "",
   },

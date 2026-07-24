@@ -2,17 +2,22 @@ import { Router } from "express";
 import prisma from "../../shared/prisma";
 import { requireAuth } from "../middleware/requireAuth";
 import { computeSuggestions, applySuggestions } from "../../shared/compare";
+import { oauthClientFor } from "../../shared/google/oauthClient";
+import {
+  extractSpreadsheetId,
+  validateAndSnapshot,
+  fetchRange,
+  buildRange,
+  listTabs,
+} from "../../shared/google/sheets";
+import { listSpreadsheets } from "../../shared/google/drive";
 
 const router = Router();
 
-// Verify every id is a sheet the user owns. Returns true when all present.
-async function ownsAllSheets(userId: string, ids: string[]): Promise<boolean> {
-  if (ids.length === 0) return false;
-  const owned = await prisma.sheet.findMany({
-    where: { userId, id: { in: ids } },
-    select: { id: true },
-  });
-  return owned.length === new Set(ids).size;
+// Build a Google auth client for the request's user.
+async function authFor(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  return oauthClientFor(user);
 }
 
 function parseColumns(v: unknown): string[] | null {
@@ -20,6 +25,122 @@ function parseColumns(v: unknown): string[] | null {
   if (!v.every((c) => typeof c === "string")) return null;
   return v.map((c) => c.trim()).filter(Boolean);
 }
+
+// A sheet chosen for a comparison. Compare stores these coordinates itself, so
+// no tracking `Sheet` row is involved. Accepts either a raw spreadsheetId or a
+// full Google Sheets URL.
+interface SheetInput {
+  spreadsheetId: string;
+  tab: string | null;
+  range: string;
+}
+
+function parseSheetInput(v: unknown): SheetInput | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const raw =
+    typeof o.spreadsheetId === "string" && o.spreadsheetId.trim()
+      ? o.spreadsheetId.trim()
+      : typeof o.url === "string" && o.url.trim()
+        ? o.url.trim()
+        : null;
+  if (!raw) return null;
+  let spreadsheetId: string;
+  try {
+    spreadsheetId = raw.includes("/") ? extractSpreadsheetId(raw) : raw;
+  } catch {
+    return null;
+  }
+  const tab = typeof o.tab === "string" && o.tab.trim() ? o.tab.trim() : null;
+  const range = typeof o.range === "string" && o.range.trim() ? o.range.trim() : "A1:Z1000";
+  return { spreadsheetId, tab, range };
+}
+
+// Confirm the user can read the sheet and pull its authoritative title. Throws
+// (403/404) up to the caller when access is missing.
+async function resolveSheet(
+  input: SheetInput,
+  auth: Awaited<ReturnType<typeof authFor>>
+): Promise<{ input: SheetInput; label: string }> {
+  const { label } = await validateAndSnapshot(
+    input.spreadsheetId,
+    buildRange(input.tab, input.range),
+    auth
+  );
+  return { input, label };
+}
+
+// GET /api/compare/drive-sheets — the user's Drive spreadsheets, for the picker.
+router.get("/drive-sheets", requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  try {
+    const auth = await authFor(userId);
+    const files = await listSpreadsheets(auth);
+    res.json(
+      files.map((f) => ({
+        spreadsheetId: f.spreadsheetId,
+        name: f.name,
+        ownedByMe: f.ownedByMe,
+        modifiedTime: f.modifiedTime,
+      }))
+    );
+  } catch (err: any) {
+    const status = err?.code ?? err?.status ?? err?.response?.status;
+    if (status === 401 || status === 403) {
+      res.status(403).json({ error: "Drive access not granted — sign out and sign in again." });
+      return;
+    }
+    console.error("Compare drive-sheets error:", err);
+    res.status(500).json({ error: "Failed to list your sheets" });
+  }
+});
+
+// GET /api/compare/preview?spreadsheetId=&tab=&rows= — grid preview for pickers.
+router.get("/preview", requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const spreadsheetId = typeof req.query.spreadsheetId === "string" ? req.query.spreadsheetId : "";
+  if (!spreadsheetId) {
+    res.status(400).json({ error: "spreadsheetId required" });
+    return;
+  }
+  const tab = (req.query.tab as string) || null;
+  const rowsWanted = Math.min(Number(req.query.rows) || 60, 200);
+  try {
+    const auth = await authFor(userId);
+    const rows = await fetchRange(spreadsheetId, buildRange(tab, `A1:Z${rowsWanted}`), auth);
+    res.json({ rows, tab });
+  } catch (err: any) {
+    const status = err?.code ?? err?.status ?? err?.response?.status;
+    if (status === 403 || status === 404) {
+      res.status(status).json({ error: "Cannot read this sheet" });
+      return;
+    }
+    console.error("Compare preview error:", err);
+    res.status(500).json({ error: "Failed to load sheet preview" });
+  }
+});
+
+// GET /api/compare/tabs?spreadsheetId= — tab titles for the tab dropdown.
+router.get("/tabs", requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const spreadsheetId = typeof req.query.spreadsheetId === "string" ? req.query.spreadsheetId : "";
+  if (!spreadsheetId) {
+    res.status(400).json({ error: "spreadsheetId required" });
+    return;
+  }
+  try {
+    const auth = await authFor(userId);
+    res.json({ tabs: await listTabs(spreadsheetId, auth) });
+  } catch (err: any) {
+    const status = err?.code ?? err?.status ?? err?.response?.status;
+    if (status === 403 || status === 404) {
+      res.status(status).json({ error: "Cannot read this sheet" });
+      return;
+    }
+    console.error("Compare tabs error:", err);
+    res.status(500).json({ error: "Failed to list tabs" });
+  }
+});
 
 // GET /api/compare/pending-count — total pending suggestions for the nav badge.
 router.get("/pending-count", requireAuth, async (req, res) => {
@@ -36,10 +157,7 @@ router.get("/groups", requireAuth, async (req, res) => {
   const groups = await prisma.comparisonGroup.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
-    include: {
-      masterSheet: { select: { id: true, label: true } },
-      targets: { include: { sheet: { select: { id: true, label: true } } } },
-    },
+    include: { targets: true },
   });
 
   const counts = await prisma.suggestion.groupBy({
@@ -48,7 +166,6 @@ router.get("/groups", requireAuth, async (req, res) => {
     _count: true,
   });
   const pendingBy = new Map<string, number>();
-  const conflictBy = new Map<string, number>();
   for (const c of counts) {
     if (c.status === "pending") pendingBy.set(c.groupId, c._count);
   }
@@ -57,6 +174,7 @@ router.get("/groups", requireAuth, async (req, res) => {
     where: { group: { userId }, status: "pending", conflict: true },
     _count: true,
   });
+  const conflictBy = new Map<string, number>();
   for (const c of conflicts) conflictBy.set(c.groupId, c._count);
 
   res.json(
@@ -66,22 +184,33 @@ router.get("/groups", requireAuth, async (req, res) => {
       enabled: g.enabled,
       keyColumn: g.keyColumn,
       compareColumns: g.compareColumns,
-      master: g.masterSheet,
-      targets: g.targets.map((t) => t.sheet),
+      master: {
+        id: g.masterSpreadsheetId,
+        label: g.masterLabel,
+        spreadsheetId: g.masterSpreadsheetId,
+        tab: g.masterTab,
+      },
+      targets: g.targets.map((t) => ({
+        id: t.id,
+        label: t.label,
+        spreadsheetId: t.spreadsheetId,
+        tab: t.tab,
+      })),
       pendingCount: pendingBy.get(g.id) ?? 0,
       conflictCount: conflictBy.get(g.id) ?? 0,
+      lastCheckedAt: g.lastCheckedAt,
       createdAt: g.createdAt,
     }))
   );
 });
 
-// POST /api/compare/groups — create a comparison group.
+// POST /api/compare/groups — create a comparison group from picked sheets.
 router.post("/groups", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
-  const { name, masterSheetId, targetSheetIds, keyColumn, compareColumns } = req.body as {
+  const { name, master, targets, keyColumn, compareColumns } = req.body as {
     name?: unknown;
-    masterSheetId?: unknown;
-    targetSheetIds?: unknown;
+    master?: unknown;
+    targets?: unknown;
     keyColumn?: unknown;
     compareColumns?: unknown;
   };
@@ -90,16 +219,18 @@ router.post("/groups", requireAuth, async (req, res) => {
     res.status(400).json({ error: "name must be 1–80 characters" });
     return;
   }
-  if (typeof masterSheetId !== "string") {
-    res.status(400).json({ error: "masterSheetId is required" });
+  const masterInput = parseSheetInput(master);
+  if (!masterInput) {
+    res.status(400).json({ error: "master sheet is required" });
     return;
   }
-  if (
-    !Array.isArray(targetSheetIds) ||
-    targetSheetIds.length === 0 ||
-    !targetSheetIds.every((id) => typeof id === "string" && id !== masterSheetId)
-  ) {
-    res.status(400).json({ error: "targetSheetIds must be a non-empty array excluding the master" });
+  if (!Array.isArray(targets) || targets.length === 0) {
+    res.status(400).json({ error: "at least one target sheet is required" });
+    return;
+  }
+  const targetInputs = targets.map(parseSheetInput);
+  if (targetInputs.some((t) => t === null)) {
+    res.status(400).json({ error: "invalid target sheet" });
     return;
   }
   const cols = parseColumns(compareColumns);
@@ -111,23 +242,49 @@ router.post("/groups", requireAuth, async (req, res) => {
     res.status(400).json({ error: "keyColumn must be a string or null" });
     return;
   }
-  if (!(await ownsAllSheets(userId, [masterSheetId, ...targetSheetIds]))) {
-    res.status(404).json({ error: "Sheet not found" });
-    return;
-  }
 
-  const group = await prisma.comparisonGroup.create({
-    data: {
-      userId,
-      name: name.trim(),
-      masterSheetId,
-      keyColumn: typeof keyColumn === "string" && keyColumn.trim() ? keyColumn.trim() : null,
-      compareColumns: cols,
-      targets: { create: targetSheetIds.map((sheetId) => ({ sheetId })) },
-    },
-  });
-  await computeSuggestions(group.id).catch(() => {});
-  res.status(201).json({ id: group.id });
+  try {
+    const auth = await authFor(userId);
+    const masterResolved = await resolveSheet(masterInput, auth);
+    const targetsResolved = await Promise.all(
+      (targetInputs as SheetInput[]).map((t) => resolveSheet(t, auth))
+    );
+
+    const group = await prisma.comparisonGroup.create({
+      data: {
+        userId,
+        name: name.trim(),
+        masterSpreadsheetId: masterInput.spreadsheetId,
+        masterTab: masterInput.tab,
+        masterRange: masterInput.range,
+        masterLabel: masterResolved.label,
+        keyColumn: typeof keyColumn === "string" && keyColumn.trim() ? keyColumn.trim() : null,
+        compareColumns: cols,
+        targets: {
+          create: targetsResolved.map((t) => ({
+            spreadsheetId: t.input.spreadsheetId,
+            tab: t.input.tab,
+            range: t.input.range,
+            label: t.label,
+          })),
+        },
+      },
+    });
+    await computeSuggestions(group.id).catch(() => {});
+    res.status(201).json({ id: group.id });
+  } catch (err: any) {
+    const status = err?.code ?? err?.status ?? err?.response?.status;
+    if (status === 403) {
+      res.status(403).json({ error: "No access to one of the sheets" });
+      return;
+    }
+    if (status === 404) {
+      res.status(404).json({ error: "A sheet was not found" });
+      return;
+    }
+    console.error("Compare create group error:", err);
+    res.status(500).json({ error: "Failed to create comparison" });
+  }
 });
 
 // Load a group the user owns, or null.
@@ -143,12 +300,12 @@ router.patch("/groups/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Group not found" });
     return;
   }
-  const { name, enabled, keyColumn, compareColumns, targetSheetIds } = req.body as {
+  const { name, enabled, keyColumn, compareColumns, targets } = req.body as {
     name?: unknown;
     enabled?: unknown;
     keyColumn?: unknown;
     compareColumns?: unknown;
-    targetSheetIds?: unknown;
+    targets?: unknown;
   };
 
   const data: Record<string, unknown> = {};
@@ -182,25 +339,53 @@ router.patch("/groups/:id", requireAuth, async (req, res) => {
     data.compareColumns = cols;
   }
 
-  if (targetSheetIds !== undefined) {
-    if (
-      !Array.isArray(targetSheetIds) ||
-      targetSheetIds.length === 0 ||
-      !targetSheetIds.every((id) => typeof id === "string" && id !== group.masterSheetId)
-    ) {
-      res.status(400).json({ error: "targetSheetIds must be a non-empty array excluding the master" });
+  let newTargets:
+    | { spreadsheetId: string; tab: string | null; range: string; label: string }[]
+    | null = null;
+  if (targets !== undefined) {
+    if (!Array.isArray(targets) || targets.length === 0) {
+      res.status(400).json({ error: "at least one target sheet is required" });
       return;
     }
-    if (!(await ownsAllSheets(userId, targetSheetIds as string[]))) {
-      res.status(404).json({ error: "Sheet not found" });
+    const inputs = targets.map(parseSheetInput);
+    if (inputs.some((t) => t === null)) {
+      res.status(400).json({ error: "invalid target sheet" });
       return;
     }
-    await prisma.comparisonTarget.deleteMany({ where: { groupId: group.id } });
-    await prisma.comparisonTarget.createMany({
-      data: (targetSheetIds as string[]).map((sheetId) => ({ groupId: group.id, sheetId })),
-    });
+    try {
+      const auth = await authFor(userId);
+      const resolved = await Promise.all(
+        (inputs as SheetInput[]).map((t) => resolveSheet(t, auth))
+      );
+      newTargets = resolved.map((t) => ({
+        spreadsheetId: t.input.spreadsheetId,
+        tab: t.input.tab,
+        range: t.input.range,
+        label: t.label,
+      }));
+    } catch (err: any) {
+      const status = err?.code ?? err?.status ?? err?.response?.status;
+      if (status === 403) {
+        res.status(403).json({ error: "No access to one of the sheets" });
+        return;
+      }
+      if (status === 404) {
+        res.status(404).json({ error: "A sheet was not found" });
+        return;
+      }
+      console.error("Compare patch validate error:", err);
+      res.status(500).json({ error: "Failed to update comparison" });
+      return;
+    }
   }
 
+  if (newTargets) {
+    // Replacing targets drops their suggestions (cascade) — recompute repopulates.
+    await prisma.comparisonTarget.deleteMany({ where: { groupId: group.id } });
+    await prisma.comparisonTarget.createMany({
+      data: newTargets.map((t) => ({ groupId: group.id, ...t })),
+    });
+  }
   await prisma.comparisonGroup.update({ where: { id: group.id }, data });
   await computeSuggestions(group.id).catch(() => {});
   res.json({ ok: true });
@@ -223,15 +408,24 @@ router.get("/groups/:id/columns", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
   const group = await prisma.comparisonGroup.findFirst({
     where: { id: req.params.id, userId },
-    include: { masterSheet: { select: { lastSnapshot: true } } },
   });
   if (!group) {
     res.status(404).json({ error: "Group not found" });
     return;
   }
-  const snapshot = group.masterSheet.lastSnapshot;
-  const header = Array.isArray(snapshot) ? ((snapshot[0] as string[]) ?? []) : [];
-  res.json({ columns: header.filter((h) => typeof h === "string" && h.trim()) });
+  try {
+    const auth = await authFor(userId);
+    const rows = await fetchRange(
+      group.masterSpreadsheetId,
+      buildRange(group.masterTab, "A1:Z1"),
+      auth
+    );
+    const header = (rows[0] ?? []) as string[];
+    res.json({ columns: header.filter((h) => typeof h === "string" && h.trim()) });
+  } catch (err: any) {
+    console.error("Compare columns error:", err);
+    res.json({ columns: [] });
+  }
 });
 
 // POST /api/compare/groups/:id/run — recompute + return fresh suggestions.
@@ -251,7 +445,7 @@ async function listSuggestions(groupId: string, status: string, q: string) {
   const rows = await prisma.suggestion.findMany({
     where: { groupId, ...(status && status !== "all" ? { status } : {}) },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    include: { targetSheet: { select: { id: true, label: true } } },
+    include: { target: { select: { id: true, label: true } } },
     take: 500,
   });
   const needle = q.trim().toLowerCase();
@@ -262,11 +456,11 @@ async function listSuggestions(groupId: string, status: string, q: string) {
         s.keyValue.toLowerCase().includes(needle) ||
         s.column.toLowerCase().includes(needle) ||
         s.masterValue.toLowerCase().includes(needle) ||
-        s.targetSheet.label.toLowerCase().includes(needle)
+        s.target.label.toLowerCase().includes(needle)
     )
     .map((s) => ({
       id: s.id,
-      target: s.targetSheet,
+      target: s.target,
       keyValue: s.keyValue,
       column: s.column,
       masterValue: s.masterValue,

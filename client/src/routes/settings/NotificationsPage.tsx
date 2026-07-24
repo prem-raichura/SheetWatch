@@ -23,7 +23,43 @@ const SOUNDS: { value: SoundKind; label: string }[] = [
   { value: "off", label: "Off" },
   { value: "chime", label: "Chime" },
   { value: "pop", label: "Pop" },
+  { value: "ping", label: "Ping" },
+  { value: "bell", label: "Bell" },
+  { value: "blip", label: "Blip" },
 ];
+
+// Segmented sound chooser + preview button, reused per notification category.
+function SoundPicker({ value, onChange }: { value: SoundKind; onChange: (v: SoundKind) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="inline-flex flex-wrap rounded-lg border border-line bg-paper p-0.5" role="group">
+        {SOUNDS.map((s) => (
+          <button
+            key={s.value}
+            aria-pressed={value === s.value}
+            onClick={() => {
+              onChange(s.value);
+              playSound(s.value);
+            }}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              value === s.value ? "bg-card text-ink-900 shadow-xs" : "text-ink-500 hover:text-ink-900"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={() => playSound(value)}
+        disabled={value === "off"}
+        aria-label="Preview sound"
+        className="rounded-lg border border-line bg-surface p-2 text-ink-400 shadow-xs transition-all hover:border-teal/40 hover:text-teal-600 disabled:opacity-40"
+      >
+        <Volume2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 export default function NotificationsPage() {
   const { prefs, update } = usePrefs();
@@ -135,36 +171,18 @@ export default function NotificationsPage() {
         )}
       </Section>
 
-      <Section title="In-app sound" hint="Played when new changes arrive while the app is open.">
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-line bg-paper p-0.5" role="group">
-            {SOUNDS.map((s) => (
-              <button
-                key={s.value}
-                aria-pressed={prefs.notifications.sound === s.value}
-                onClick={() => {
-                  update({ notifications: { sound: s.value } });
-                  playSound(s.value);
-                }}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  prefs.notifications.sound === s.value
-                    ? "bg-card text-ink-900 shadow-xs"
-                    : "text-ink-500 hover:text-ink-900"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => playSound(prefs.notifications.sound)}
-            disabled={prefs.notifications.sound === "off"}
-            aria-label="Preview sound"
-            className="rounded-lg border border-line bg-surface p-2 text-ink-400 shadow-xs transition-all hover:border-teal/40 hover:text-teal-600 disabled:opacity-40"
-          >
-            <Volume2 className="h-4 w-4" />
-          </button>
-        </div>
+      <Section title="Tracking sound" hint="Played when a tracked sheet changes (and on KPI alerts) while the app is open.">
+        <SoundPicker
+          value={prefs.notifications.sound}
+          onChange={(v) => update({ notifications: { sound: v } })}
+        />
+      </Section>
+
+      <Section title="Compare sound" hint="Played when a new compare suggestion appears while the app is open.">
+        <SoundPicker
+          value={prefs.notifications.compareSound}
+          onChange={(v) => update({ notifications: { compareSound: v } })}
+        />
       </Section>
 
       <DigestSettings />
