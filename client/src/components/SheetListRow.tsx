@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clock, Pause, Play, Settings2, Trash2 } from "lucide-react";
+import { Clock, ExternalLink, Pause, Play, Settings2, Trash2 } from "lucide-react";
 import { Sheet, Project } from "../types";
 import PulseDot from "./PulseDot";
 import SheetSettings from "./SheetSettings";
@@ -74,6 +74,16 @@ export default function SheetListRow({
         </span>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          <a
+            href={`https://docs.google.com/spreadsheets/d/${sheet.spreadsheetId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open in Google Sheets"
+            title="Open in Google Sheets"
+            className="rounded p-1 text-ink-400 transition-colors hover:text-teal-600"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
           <button
             onClick={checkNow}
             disabled={checking || paused}

@@ -33,6 +33,7 @@ export interface CompareGroup {
   targets: CompareSheetRef[];
   pendingCount: number;
   conflictCount: number;
+  statusCounts: { pending: number; applied: number; ignored: number; failed: number };
   lastCheckedAt: string | null;
   createdAt: string;
 }

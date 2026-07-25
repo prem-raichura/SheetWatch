@@ -22,7 +22,9 @@ export function oauthClientFor(user: User) {
     if (tokens.expiry_date) update.tokenExpiry = new Date(tokens.expiry_date);
     if (tokens.refresh_token) update.refreshToken = encrypt(tokens.refresh_token);
     if (Object.keys(update).length > 0) {
-      await prisma.user.update({ where: { id: user.id }, data: update }).catch(console.error);
+      await prisma.user
+        .update({ where: { id: user.id }, data: update })
+        .catch((err) => console.error("Token refresh persist failed:", err?.message ?? err));
     }
   });
 

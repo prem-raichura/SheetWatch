@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import prisma from "../../shared/prisma";
 import { requireAuth } from "../middleware/requireAuth";
+import { rateLimit } from "../middleware/rateLimit";
 import { oauthClientFor } from "../../shared/google/oauthClient";
 import {
   extractSpreadsheetId,
@@ -29,6 +30,9 @@ import { checkSheetNow } from "../../shared/checkNow";
 
 const router = Router();
 
+// Throttle endpoints that fan out to Google (Drive list / add-sheet / preview).
+const expensiveLimiter = rateLimit({ windowMs: 60_000, max: 30 });
+
 router.get("/", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
   const sheets = await prisma.sheet.findMany({
@@ -47,7 +51,7 @@ router.get("/", requireAuth, async (req, res) => {
   );
 });
 
-router.get("/available", requireAuth, async (req, res) => {
+router.get("/available", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   try {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -83,7 +87,7 @@ router.get("/available", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   const { url, spreadsheetId: bodyId, projectId } = req.body as {
     url?: string;
@@ -476,7 +480,7 @@ router.get("/:id/tabs", requireAuth, async (req, res) => {
 });
 
 // Grid preview for the visual range picker: first rows × 26 cols of a tab.
-router.get("/:id/preview", requireAuth, async (req, res) => {
+router.get("/:id/preview", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   const tab = (req.query.tab as string) || null;
   const rowsWanted = Math.min(Number(req.query.rows) || 60, 200);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import prisma from "../../shared/prisma";
 import { requireAuth } from "../middleware/requireAuth";
+import { rateLimit } from "../middleware/rateLimit";
 import { computeSuggestions, applySuggestions } from "../../shared/compare";
 import { oauthClientFor } from "../../shared/google/oauthClient";
 import {
@@ -13,6 +14,9 @@ import {
 import { listSpreadsheets } from "../../shared/google/drive";
 
 const router = Router();
+
+// Throttle the endpoints that fan out to Google (Drive list / sheet reads / recompute).
+const expensiveLimiter = rateLimit({ windowMs: 60_000, max: 30 });
 
 // Build a Google auth client for the request's user.
 async function authFor(userId: string) {
@@ -71,7 +75,7 @@ async function resolveSheet(
 }
 
 // GET /api/compare/drive-sheets — the user's Drive spreadsheets, for the picker.
-router.get("/drive-sheets", requireAuth, async (req, res) => {
+router.get("/drive-sheets", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   try {
     const auth = await authFor(userId);
@@ -96,7 +100,7 @@ router.get("/drive-sheets", requireAuth, async (req, res) => {
 });
 
 // GET /api/compare/preview?spreadsheetId=&tab=&rows= — grid preview for pickers.
-router.get("/preview", requireAuth, async (req, res) => {
+router.get("/preview", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   const spreadsheetId = typeof req.query.spreadsheetId === "string" ? req.query.spreadsheetId : "";
   if (!spreadsheetId) {
@@ -142,6 +146,45 @@ router.get("/tabs", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/compare/resolve?url=…  (or ?spreadsheetId=…) — validate access to a
+// pasted Google Sheets link and return its id + title, so the picker can offer
+// sheets that aren't in the Drive list.
+router.get("/resolve", requireAuth, expensiveLimiter, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const raw =
+    (typeof req.query.url === "string" && req.query.url) ||
+    (typeof req.query.spreadsheetId === "string" && req.query.spreadsheetId) ||
+    "";
+  if (!raw) {
+    res.status(400).json({ error: "url or spreadsheetId required" });
+    return;
+  }
+  let spreadsheetId: string;
+  try {
+    spreadsheetId = raw.includes("/") ? extractSpreadsheetId(raw) : raw.trim();
+  } catch {
+    res.status(400).json({ error: "Not a valid Google Sheets URL" });
+    return;
+  }
+  try {
+    const auth = await authFor(userId);
+    const { label } = await validateAndSnapshot(spreadsheetId, "A1:A1", auth);
+    res.json({ spreadsheetId, name: label });
+  } catch (err: any) {
+    const status = err?.code ?? err?.status ?? err?.response?.status;
+    if (status === 403) {
+      res.status(403).json({ error: "No access to this sheet" });
+      return;
+    }
+    if (status === 404) {
+      res.status(404).json({ error: "Sheet not found" });
+      return;
+    }
+    console.error("Compare resolve error:", err);
+    res.status(500).json({ error: "Couldn’t open that sheet" });
+  }
+});
+
 // GET /api/compare/pending-count — total pending suggestions for the nav badge.
 router.get("/pending-count", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
@@ -165,9 +208,13 @@ router.get("/groups", requireAuth, async (req, res) => {
     where: { group: { userId } },
     _count: true,
   });
-  const pendingBy = new Map<string, number>();
+  const statusBy = new Map<string, { pending: number; applied: number; ignored: number; failed: number }>();
   for (const c of counts) {
-    if (c.status === "pending") pendingBy.set(c.groupId, c._count);
+    const e = statusBy.get(c.groupId) ?? { pending: 0, applied: 0, ignored: 0, failed: 0 };
+    if (c.status === "pending" || c.status === "applied" || c.status === "ignored" || c.status === "failed") {
+      e[c.status] = c._count;
+    }
+    statusBy.set(c.groupId, e);
   }
   const conflicts = await prisma.suggestion.groupBy({
     by: ["groupId"],
@@ -196,8 +243,9 @@ router.get("/groups", requireAuth, async (req, res) => {
         spreadsheetId: t.spreadsheetId,
         tab: t.tab,
       })),
-      pendingCount: pendingBy.get(g.id) ?? 0,
+      pendingCount: statusBy.get(g.id)?.pending ?? 0,
       conflictCount: conflictBy.get(g.id) ?? 0,
+      statusCounts: statusBy.get(g.id) ?? { pending: 0, applied: 0, ignored: 0, failed: 0 },
       lastCheckedAt: g.lastCheckedAt,
       createdAt: g.createdAt,
     }))
@@ -429,7 +477,7 @@ router.get("/groups/:id/columns", requireAuth, async (req, res) => {
 });
 
 // POST /api/compare/groups/:id/run — recompute + return fresh suggestions.
-router.post("/groups/:id/run", requireAuth, async (req, res) => {
+router.post("/groups/:id/run", requireAuth, expensiveLimiter, async (req, res) => {
   const userId = req.session!.userId as string;
   const group = await ownedGroup(userId, req.params.id);
   if (!group) {

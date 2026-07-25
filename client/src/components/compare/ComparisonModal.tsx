@@ -14,6 +14,15 @@ interface Props {
   onSave: (g: NewGroup) => Promise<void>;
 }
 
+// Pull a spreadsheet id out of a pasted Google Sheets URL, or accept a bare id.
+function sheetIdFromQuery(q: string): string | null {
+  const s = q.trim();
+  const m = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9-_]{30,}$/.test(s)) return s; // looks like a raw id
+  return null;
+}
+
 // Create/edit a comparison group. Sheets are chosen from the user's Google
 // Drive (independent of tracking): pick one master and one or more targets,
 // then a key column (optional) and the columns to compare.
@@ -34,6 +43,11 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Sheets added by pasting a link (not in the Drive list). Kept so a picked
+  // link stays visible after the search box is cleared.
+  const [linked, setLinked] = useState<DriveSheet[]>([]);
+  const [resolving, setResolving] = useState(false);
+  const [resolveErr, setResolveErr] = useState<string | null>(null);
 
   // Load the user's Drive spreadsheets for the picker.
   useEffect(() => {
@@ -83,10 +97,68 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
     setCompareColumns((prev) => (prev.trim() ? `${prev.trim()}, ${h}` : h));
   };
 
-  const filtered = useMemo(
-    () => drive.filter((s) => s.name.toLowerCase().includes(query.toLowerCase())),
-    [drive, query]
+  // Known sheets = pasted links first, then the Drive list, de-duplicated.
+  const pool = useMemo(() => {
+    const seen = new Set<string>();
+    const out: DriveSheet[] = [];
+    for (const s of [...linked, ...drive]) {
+      if (seen.has(s.spreadsheetId)) continue;
+      seen.add(s.spreadsheetId);
+      out.push(s);
+    }
+    return out;
+  }, [linked, drive]);
+
+  const queryId = useMemo(() => sheetIdFromQuery(query), [query]);
+
+  // When the search box holds a Google Sheets link we don't already know,
+  // resolve it (validate access + fetch its title) and add it to the list.
+  useEffect(() => {
+    setResolveErr(null);
+    if (!queryId || pool.some((s) => s.spreadsheetId === queryId)) {
+      setResolving(false);
+      return;
+    }
+    let live = true;
+    setResolving(true);
+    const t = setTimeout(() => {
+      api
+        .get<{ spreadsheetId: string; name: string }>(
+          `/api/compare/resolve?url=${encodeURIComponent(query.trim())}`
+        )
+        .then((r) => {
+          if (!live) return;
+          setLinked((prev) =>
+            prev.some((s) => s.spreadsheetId === r.spreadsheetId)
+              ? prev
+              : [{ spreadsheetId: r.spreadsheetId, name: r.name, ownedByMe: false, modifiedTime: "" }, ...prev]
+          );
+        })
+        .catch((e) => live && setResolveErr(e instanceof Error ? e.message : "Couldn’t open that sheet"))
+        .finally(() => live && setResolving(false));
+    }, 400);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [queryId, query, pool]);
+
+  const selectedIds = useMemo(
+    () => new Set([masterId, ...targetIds].filter(Boolean)),
+    [masterId, targetIds]
   );
+
+  // Selected sheets pinned on top (so picks stay visible under any filter),
+  // then the search-name / pasted-link matches.
+  const visible = useMemo(() => {
+    const selected = pool.filter((s) => selectedIds.has(s.spreadsheetId));
+    const nq = query.trim().toLowerCase();
+    const rest = pool.filter((s) => {
+      if (selectedIds.has(s.spreadsheetId)) return false;
+      return queryId ? s.spreadsheetId === queryId : !nq || s.name.toLowerCase().includes(nq);
+    });
+    return [...selected, ...rest];
+  }, [pool, selectedIds, query, queryId]);
 
   const submit = async () => {
     setErr(null);
@@ -138,48 +210,65 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
               className={`${input} mb-2`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your Google Drive sheets…"
+              placeholder="Search sheets, or paste a Google Sheets link…"
             />
             <div className="max-h-56 space-y-0.5 overflow-y-auto rounded-lg border border-line bg-paper p-2">
               {driveLoading ? (
                 <SkeletonRows count={4} />
-              ) : filtered.length === 0 ? (
+              ) : visible.length === 0 ? (
                 <p className="px-1 py-2 text-xs text-ink-400">
-                  {drive.length === 0 ? "No spreadsheets found in your Google Drive." : "No matching sheets."}
+                  {resolving
+                    ? "Opening that link…"
+                    : resolveErr
+                      ? resolveErr
+                      : queryId
+                        ? "Couldn’t open that link."
+                        : drive.length === 0
+                          ? "No sheets in your Drive. Paste a Google Sheets link to add one."
+                          : "No matches. Paste a Google Sheets link to add a sheet."}
                 </p>
               ) : (
-                filtered.map((s) => {
-                  const isMaster = masterId === s.spreadsheetId;
-                  const isTarget = !isMaster && targetIds.includes(s.spreadsheetId);
-                  return (
-                    <div key={s.spreadsheetId} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-secondary">
-                      <button
-                        type="button"
-                        onClick={() => setMasterId(isMaster ? "" : s.spreadsheetId)}
-                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors ${
-                          isMaster
-                            ? "border-teal bg-teal text-primary-foreground"
-                            : "border-line bg-surface text-ink-500 hover:border-teal/40 hover:text-teal-600"
-                        }`}
-                        title="Use as master"
-                      >
-                        {isMaster ? "Master" : "Master?"}
-                      </button>
-                      <label className={`flex min-w-0 flex-1 items-center gap-2 ${isMaster ? "opacity-50" : "cursor-pointer"}`}>
-                        <input
-                          type="checkbox"
-                          disabled={isMaster}
-                          checked={isTarget}
-                          onChange={() => toggleTarget(s.spreadsheetId)}
-                        />
-                        <span className="truncate">{s.name}</span>
-                      </label>
-                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink-400">
-                        {s.ownedByMe ? "owner" : "shared"}
-                      </span>
-                    </div>
-                  );
-                })
+                <>
+                  {resolving && (
+                    <p className="px-1 py-1 text-[11px] text-ink-400">Opening that link…</p>
+                  )}
+                  {resolveErr && !resolving && (
+                    <p className="px-1 py-1 text-[11px] text-coral-600">{resolveErr}</p>
+                  )}
+                  {visible.map((s) => {
+                    const isMaster = masterId === s.spreadsheetId;
+                    const isTarget = !isMaster && targetIds.includes(s.spreadsheetId);
+                    const fromLink = linked.some((l) => l.spreadsheetId === s.spreadsheetId);
+                    return (
+                      <div key={s.spreadsheetId} className="flex items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-secondary">
+                        <button
+                          type="button"
+                          onClick={() => setMasterId(isMaster ? "" : s.spreadsheetId)}
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                            isMaster
+                              ? "border-teal bg-teal text-primary-foreground"
+                              : "border-line bg-surface text-ink-500 hover:border-teal/40 hover:text-teal-600"
+                          }`}
+                          title="Use as master"
+                        >
+                          {isMaster ? "Master" : "Master?"}
+                        </button>
+                        <label className={`flex min-w-0 flex-1 items-center gap-2 ${isMaster ? "opacity-50" : "cursor-pointer"}`}>
+                          <input
+                            type="checkbox"
+                            disabled={isMaster}
+                            checked={isTarget}
+                            onChange={() => toggleTarget(s.spreadsheetId)}
+                          />
+                          <span className="truncate">{s.name}</span>
+                        </label>
+                        <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-ink-400">
+                          {fromLink ? "link" : s.ownedByMe ? "owner" : "shared"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           </div>

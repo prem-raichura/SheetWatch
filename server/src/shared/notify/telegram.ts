@@ -25,7 +25,7 @@ export async function sendTelegram(chatId: string, payload: NotifyPayload): Prom
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId.trim(),
-        text: `<b>${escapeHtml(payload.title)}</b>\n${escapeHtml(payload.body)}\n${payload.url}`,
+        text: `<b>${escapeHtml(payload.title)}</b>\n${escapeHtml(payload.body)}\n${escapeHtml(payload.url)}`,
         parse_mode: "HTML",
         disable_web_page_preview: true,
       }),

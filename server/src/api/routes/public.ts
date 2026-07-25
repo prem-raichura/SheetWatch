@@ -1,34 +1,13 @@
 import { Router } from "express";
 import prisma from "../../shared/prisma";
 import { computeKpis } from "../../shared/kpi";
+import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
 
-// Naive per-IP throttle — adequate for a self-hosted tool. 60 req/min.
-const WINDOW_MS = 60_000;
-const LIMIT = 60;
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = hits.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    hits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  if (hits.size > 10_000) hits.clear(); // memory guard
-  return entry.count > LIMIT;
-}
-
-// Public read-only KPI board. No auth — the token is the credential.
-router.get("/kpis/:token", async (req, res) => {
-  const ip = req.ip ?? "unknown";
-  if (rateLimited(ip)) {
-    res.status(429).json({ error: "Too many requests" });
-    return;
-  }
-
+// Public read-only KPI board. No auth — the token is the credential. Per-IP
+// throttle guards against token brute-force / scraping.
+router.get("/kpis/:token", rateLimit({ windowMs: 60_000, max: 60 }), async (req, res) => {
   const link = await prisma.shareLink.findUnique({
     where: { token: req.params.token },
   });

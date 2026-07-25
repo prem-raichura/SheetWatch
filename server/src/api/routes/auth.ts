@@ -4,8 +4,12 @@ import { google } from "googleapis";
 import prisma from "../../shared/prisma";
 import { encrypt } from "../../shared/crypto";
 import { requireAuth } from "../middleware/requireAuth";
+import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
+
+// Throttle the OAuth round-trip per IP (abuse / code-exchange hammering).
+const authLimiter = rateLimit({ windowMs: 60_000, max: 20 });
 
 // Read-write Sheets scope: reading covers watching/diffing; writing is needed
 // to apply accepted cross-sheet suggestions back into target sheets.
@@ -35,7 +39,7 @@ function makeOAuth2Client() {
   );
 }
 
-router.get("/google", (req, res) => {
+router.get("/google", authLimiter, (req, res) => {
   // CSRF protection: bind the OAuth round-trip to this browser session.
   const state = crypto.randomBytes(16).toString("hex");
   req.session!.oauthState = state;
@@ -49,7 +53,7 @@ router.get("/google", (req, res) => {
   res.redirect(url);
 });
 
-router.get("/google/callback", async (req, res) => {
+router.get("/google/callback", authLimiter, async (req, res) => {
   const code = req.query.code as string | undefined;
   if (!code) {
     res.redirect(`${process.env.FRONTEND_URL}/login?error=no_code`);
@@ -57,11 +61,12 @@ router.get("/google/callback", async (req, res) => {
   }
 
   const expectedState = req.session?.oauthState as string | undefined;
+  // One-time use: clear the state on both success and failure.
+  if (req.session) delete req.session.oauthState;
   if (!expectedState || req.query.state !== expectedState) {
     res.redirect(`${process.env.FRONTEND_URL}/login?error=state_mismatch`);
     return;
   }
-  delete req.session!.oauthState;
 
   try {
     const client = makeOAuth2Client();

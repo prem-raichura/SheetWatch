@@ -1,8 +1,12 @@
 import { CellChange } from "./types";
 
 export function csvEscape(value: string): string {
-  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
+  // Neutralize spreadsheet formula injection: a leading = + - @ (or control
+  // char) can execute when the CSV is opened in Excel/Sheets — prefix with '.
+  let v = value;
+  if (/^[=+\-@\t\r]/.test(v)) v = `'${v}`;
+  if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
 }
 
 export function csvRow(fields: string[]): string {

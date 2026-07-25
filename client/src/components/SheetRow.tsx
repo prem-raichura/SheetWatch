@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ExternalLink } from "lucide-react";
 import { Sheet, Project } from "../types";
 import NotifyToggles from "./NotifyToggles";
 import PulseDot from "./PulseDot";
@@ -164,6 +165,15 @@ export default function SheetRow({ sheet, projects, onUpdated }: Props) {
           >
             ⚙ settings
           </button>
+          <a
+            href={`https://docs.google.com/spreadsheets/d/${sheet.spreadsheetId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open in Google Sheets"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-teal-600"
+          >
+            <ExternalLink className="h-3 w-3" /> open
+          </a>
           <Link
             to={`/history/${sheet.id}`}
             className="rounded-md px-2 py-1 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-700"
