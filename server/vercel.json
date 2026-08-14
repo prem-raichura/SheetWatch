@@ -1,5 +1,6 @@
 {
-  "buildCommand": "prisma generate && prisma migrate deploy",
+  "buildCommand": "prisma generate && prisma migrate deploy && mkdir -p public",
+  "outputDirectory": "public",
   "installCommand": "npm install",
   "functions": {
     "api/index.ts": {

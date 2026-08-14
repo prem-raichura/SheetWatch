@@ -72,8 +72,25 @@ Migrations need a real session (advisory locks, DDL), which PgBouncer in
 transaction mode can't provide — hence `DIRECT_URL` everywhere. Prisma does not
 fall back if it's missing, it hard-errors.
 
-Migrations run automatically on every API deploy:
-`server/vercel.json` → `"buildCommand": "prisma generate && prisma migrate deploy"`.
+Migrations run automatically on every API deploy, via `server/vercel.json`:
+
+```json
+"buildCommand": "prisma generate && prisma migrate deploy && mkdir -p public",
+"outputDirectory": "public",
+```
+
+The `mkdir` looks odd and is load-bearing. Defining any `buildCommand` makes
+Vercel look for a static output directory once the build finishes, and this
+build produces none — it only generates the Prisma client and migrates. Without
+it the deploy fails with:
+
+```
+Error: No Output Directory named "public" found after the Build completed.
+```
+
+`api/index.ts` deploys as a function regardless of what's in there, and the
+catch-all rewrite sends every path to it, so the directory is empty on purpose
+and stays that way. `mkdir -p` is idempotent, so repeat deploys are fine.
 
 ---
 
