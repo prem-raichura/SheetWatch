@@ -3,9 +3,9 @@
 Serving on Vercel, recurring work on a VM.
 
 ```
-Browser ──▶ Vercel · sheetwatch        (static PWA; proxies /api /auth /public)
+Browser ──▶ Vercel · sheet-watch        (static PWA; proxies /api /auth /public)
    │            │
-   │            └──▶ Vercel · sheetwatch-api   (Express, serverless — HTTP only)
+   │            └──▶ Vercel · sheet-watch-api   (Express, serverless — HTTP only)
    │                              │
    └──WebSocket──▶ Cloudflare      │
         sheetwatch-realtime        │
@@ -35,8 +35,8 @@ deployment, and `VITE_API_BASE_URL` is left **empty** so the browser only ever
 talks to its own origin.
 
 This is load-bearing, not decoration. The session cookie (`sw_session`) is set
-by the API. If the browser called `sheetwatch-api.vercel.app` directly from
-`sheetwatch.vercel.app`, that cookie would be a **third-party cookie** — Safari
+by the API. If the browser called `sheet-watch-api.vercel.app` directly from
+`sheet-watch.vercel.app`, that cookie would be a **third-party cookie** — Safari
 blocks those outright, so sign-in would fail on macOS Safari and on every
 iPhone. iOS is exactly where the PWA install matters, since it's the only way
 web push works there at all.
@@ -102,7 +102,7 @@ files whose names collide with an API route.
 
 New project from this repo, **Root Directory `server`**.
 
-Name it **`sheetwatch-api`**. A different name means updating the four rewrite
+Name it **`sheet-watch-api`**. A different name means updating the four rewrite
 destinations in `client/vercel.json` to match.
 
 | Var | Value |
@@ -112,8 +112,8 @@ destinations in `client/vercel.json` to match.
 | `SESSION_SECRET` | 32+ random chars |
 | `TOKEN_ENCRYPTION_KEY` | 64 hex chars |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | from Google Cloud |
-| `GOOGLE_REDIRECT_URI` | `https://sheetwatch.vercel.app/auth/google/callback` — the **client** origin, via the proxy |
-| `FRONTEND_URL` | `https://sheetwatch.vercel.app` |
+| `GOOGLE_REDIRECT_URI` | `https://sheet-watch.vercel.app/auth/google/callback` — the **client** origin, via the proxy |
+| `FRONTEND_URL` | `https://sheet-watch.vercel.app` |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_MAILTO` | `npx web-push generate-vapid-keys` |
 | `NODE_ENV` | `production` |
 | `WORKER_MODE` | **unset** |
@@ -136,7 +136,7 @@ logs. Expected here: the VM owns polling.
 
 ## 3. Vercel — client project
 
-Second project, same repo, **Root Directory `client`**, name **`sheetwatch`**.
+Second project, same repo, **Root Directory `client`**, name **`sheet-watch`**.
 
 | Var | Value |
 |---|---|
@@ -153,7 +153,7 @@ an env edit.
 **APIs & Services → Credentials → your OAuth client**, authorized redirect URI:
 
 ```
-https://sheetwatch.vercel.app/auth/google/callback
+https://sheet-watch.vercel.app/auth/google/callback
 ```
 
 The client origin, not the API's — Google redirects the *browser*, and the
@@ -275,8 +275,8 @@ front rather than waiting for the first deploy.
 ## Verification
 
 ```bash
-curl https://sheetwatch.vercel.app/healthz          # {"ok":true} — proxy works
-curl https://sheetwatch-api.vercel.app/healthz      # {"ok":true} — API works
+curl https://sheet-watch.vercel.app/healthz          # {"ok":true} — proxy works
+curl https://sheet-watch-api.vercel.app/healthz      # {"ok":true} — API works
 docker compose logs --tail=20 worker                # on the VM
 ```
 
@@ -336,7 +336,7 @@ API's `WORKER_MODE` and `REDIS_URL` unset — they already are — and set
 Both take `Authorization: Bearer <CRON_SECRET>`. Both accept GET and POST.
 
 ```bash
-curl -X POST https://sheetwatch-api.vercel.app/api/cron/poll \
+curl -X POST https://sheet-watch-api.vercel.app/api/cron/poll \
   -H "Authorization: Bearer $CRON_SECRET"
 # {"due":3,"checked":3,"skipped":0,"changed":1,"failed":0}
 ```

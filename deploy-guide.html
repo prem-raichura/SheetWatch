@@ -526,9 +526,9 @@
       the last. Tick steps as you go; progress is saved in this browser.
       Budget about an hour for a first run.
     </p>
-    <pre class="topology">Browser ──▶ <b>Vercel · sheetwatch</b>          <i>static PWA; proxies /api /auth /public</i>
+    <pre class="topology">Browser ──▶ <b>Vercel · sheet-watch</b>          <i>static PWA; proxies /api /auth /public</i>
    │            │
-   │            └──▶ <b>Vercel · sheetwatch-api</b>   <i>Express, serverless — HTTP only</i>
+   │            └──▶ <b>Vercel · sheet-watch-api</b>   <i>Express, serverless — HTTP only</i>
    │                              │
    └──WebSocket──▶ <b>Cloudflare</b>     │
         <i>sheetwatch-realtime</i>        │
@@ -698,7 +698,7 @@ npx web-push generate-vapid-keys</pre></div>
 
     <p>
       New project from this repo with <strong>Root Directory <code>server</code></strong>.
-      Name it <code>sheetwatch-api</code> — a different name means editing the four
+      Name it <code>sheet-watch-api</code> — a different name means editing the four
       rewrite destinations in <code>client/vercel.json</code> to match.
     </p>
 
@@ -712,8 +712,8 @@ npx web-push generate-vapid-keys</pre></div>
           <tr><td><code>TOKEN_ENCRYPTION_KEY</code></td><td class="wrap">from phase 00</td></tr>
           <tr><td><code>GOOGLE_CLIENT_ID</code></td><td class="wrap">from Google Cloud</td></tr>
           <tr><td><code>GOOGLE_CLIENT_SECRET</code></td><td class="wrap">from Google Cloud</td></tr>
-          <tr><td><code>GOOGLE_REDIRECT_URI</code></td><td class="wrap"><code>https://sheetwatch.vercel.app/auth/google/callback</code> — the <strong>client</strong> origin</td></tr>
-          <tr><td><code>FRONTEND_URL</code></td><td class="wrap"><code>https://sheetwatch.vercel.app</code></td></tr>
+          <tr><td><code>GOOGLE_REDIRECT_URI</code></td><td class="wrap"><code>https://sheet-watch.vercel.app/auth/google/callback</code> — the <strong>client</strong> origin</td></tr>
+          <tr><td><code>FRONTEND_URL</code></td><td class="wrap"><code>https://sheet-watch.vercel.app</code></td></tr>
           <tr><td><code>VAPID_PUBLIC_KEY</code></td><td class="wrap">from phase 00</td></tr>
           <tr><td><code>VAPID_PRIVATE_KEY</code></td><td class="wrap">from phase 00</td></tr>
           <tr><td><code>VAPID_MAILTO</code></td><td class="wrap"><code>mailto:you@example.com</code></td></tr>
@@ -728,7 +728,7 @@ npx web-push generate-vapid-keys</pre></div>
     <ol class="steps">
       <li>
         <input type="checkbox" id="c-2-1">
-        <div class="step-body"><p>Create the project, Root Directory <code>server</code>, name <code>sheetwatch-api</code>.</p></div>
+        <div class="step-body"><p>Create the project, Root Directory <code>server</code>, name <code>sheet-watch-api</code>.</p></div>
       </li>
       <li>
         <input type="checkbox" id="c-2-2">
@@ -804,7 +804,7 @@ npx web-push generate-vapid-keys</pre></div>
 
     <p>
       Second project, same repo, <strong>Root Directory <code>client</code></strong>,
-      name <code>sheetwatch</code>.
+      name <code>sheet-watch</code>.
     </p>
 
     <div class="table-wrap">
@@ -820,7 +820,7 @@ npx web-push generate-vapid-keys</pre></div>
     <ol class="steps">
       <li>
         <input type="checkbox" id="c-3-1">
-        <div class="step-body"><p>Create the project, Root Directory <code>client</code>, name <code>sheetwatch</code>.</p></div>
+        <div class="step-body"><p>Create the project, Root Directory <code>client</code>, name <code>sheet-watch</code>.</p></div>
       </li>
       <li>
         <input type="checkbox" id="c-3-2">
@@ -838,7 +838,7 @@ npx web-push generate-vapid-keys</pre></div>
       </p>
       <p>
         The session cookie is set by the API. Point the client straight at
-        <code>sheetwatch-api.vercel.app</code> and that cookie becomes a
+        <code>sheet-watch-api.vercel.app</code> and that cookie becomes a
         third-party cookie — which Safari blocks outright. Sign-in then fails on
         macOS Safari and on <em>every iPhone</em>, which is exactly where the PWA
         install matters, since it's the only way web push works on iOS at all.
@@ -870,7 +870,7 @@ npx web-push generate-vapid-keys</pre></div>
         <input type="checkbox" id="c-4-1">
         <div class="step-body">
           <p>APIs &amp; Services → Credentials → your OAuth client. Set the authorized redirect URI to:</p>
-          <div class="code"><pre>https://sheetwatch.vercel.app/auth/google/callback</pre></div>
+          <div class="code"><pre>https://sheet-watch.vercel.app/auth/google/callback</pre></div>
         </div>
       </li>
       <li>
@@ -1059,8 +1059,8 @@ npx wrangler secret put REALTIME_SECRET   <span class="c"># from phase 00</span>
       <h2>Verify</h2>
     </div>
 
-    <div class="code"><pre>curl https://sheetwatch.vercel.app/healthz        <span class="c"># {"ok":true} — proxy works</span>
-curl https://sheetwatch-api.vercel.app/healthz    <span class="c"># {"ok":true} — API works</span>
+    <div class="code"><pre>curl https://sheet-watch.vercel.app/healthz        <span class="c"># {"ok":true} — proxy works</span>
+curl https://sheet-watch-api.vercel.app/healthz    <span class="c"># {"ok":true} — API works</span>
 docker compose logs --tail=20 worker              <span class="c"># on the VM</span></pre></div>
 
     <ol class="steps">
@@ -1188,7 +1188,7 @@ docker compose logs --tail=20 worker              <span class="c"># on the VM</s
       </table>
     </div>
 
-    <div class="code"><pre>curl -X POST https://sheetwatch-api.vercel.app/api/cron/poll \
+    <div class="code"><pre>curl -X POST https://sheet-watch-api.vercel.app/api/cron/poll \
   -H "Authorization: Bearer $CRON_SECRET"
 <span class="c"># {"due":3,"checked":3,"skipped":0,"changed":1,"failed":0}</span></pre></div>
 
