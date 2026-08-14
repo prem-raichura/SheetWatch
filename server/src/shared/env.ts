@@ -32,6 +32,13 @@ if ((process.env.SESSION_SECRET as string).length < 32) {
   throw new Error("SESSION_SECRET must be at least 32 characters");
 }
 
+// Normalize before validating, so every consumer sees a clean origin. A
+// trailing slash or a stray space is trivially easy to paste into a dashboard
+// field and breaks two things at once: CORS compares Origin byte-for-byte, so
+// "https://host/" never equals the browser's "https://host", and the redirect
+// helpers concatenate onto this value, producing "https://host//login".
+process.env.FRONTEND_URL = process.env.FRONTEND_URL!.trim().replace(/\/+$/, "");
+
 // In production a wildcard/relative FRONTEND_URL would make CORS-with-credentials
 // unsafe — require a concrete origin.
 if (process.env.NODE_ENV === "production") {

@@ -846,6 +846,13 @@ npx web-push generate-vapid-keys</pre></div>
       <p>
         It will look fine in your Chrome. That's what makes it expensive.
       </p>
+      <p>
+        <strong>Tell-tale:</strong> if you ever see a CORS error mentioning the
+        API domain, or land on
+        <code>login?error=state_mismatch</code>, this variable is set when it
+        shouldn't be. A correctly proxied deployment produces no CORS traffic at
+        all, because every request is same-origin.
+      </p>
     </div>
 
     <div class="note">
@@ -1113,6 +1120,21 @@ docker compose logs --tail=20 worker              <span class="c"># on the VM</s
       <table>
         <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
         <tbody>
+          <tr>
+            <td class="wrap"><strong>Any</strong> CORS error against the API domain</td>
+            <td class="wrap"><code>VITE_API_BASE_URL</code> is set</td>
+            <td class="wrap">The proxy exists so the browser never talks to the API cross-origin — a CORS error means it's being bypassed. Set the variable to an <strong>empty string</strong> and redeploy the client. There is no CORS configuration that fixes this correctly.</td>
+          </tr>
+          <tr>
+            <td class="wrap">Redirected to <code>login?error=state_mismatch</code></td>
+            <td class="wrap">Same cause</td>
+            <td class="wrap">With <code>VITE_API_BASE_URL</code> set, <code>/auth/google</code> starts on the API origin and stores the OAuth state in a cookie there, but Google returns to the <em>client</em> origin — which has no such cookie. Empty the variable and redeploy.</td>
+          </tr>
+          <tr>
+            <td class="wrap"><code>Access-Control-Allow-Origin</code> value has a trailing <code>/</code></td>
+            <td class="wrap"><code>FRONTEND_URL</code> ends in a slash</td>
+            <td class="wrap">Origins are compared byte-for-byte, and the browser never sends a trailing slash. <code>env.ts</code> now strips it automatically — redeploy the API to pick that up, and drop the slash in the dashboard too.</td>
+          </tr>
           <tr>
             <td class="wrap">Signed out on every reload</td>
             <td class="wrap">Cookie is third-party</td>

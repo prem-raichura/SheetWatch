@@ -45,6 +45,14 @@ Routing everything through one origin makes the cookie first-party and the
 problem disappears. Don't "simplify" this by pointing `VITE_API_BASE_URL` at the
 API domain — it will work in your Chrome and break for iPhone users.
 
+**A correctly proxied deployment generates no CORS traffic at all**, because
+every request is same-origin. So a CORS error naming the API domain is not a
+CORS problem to be configured away — it means `VITE_API_BASE_URL` is set and the
+proxy is being bypassed. The same misconfiguration also breaks sign-in with
+`login?error=state_mismatch`: `/auth/google` starts on the API origin and stores
+the OAuth state in a cookie there, but Google returns the browser to the client
+origin, which has no such cookie.
+
 > A custom domain (`app.example.com` + `api.example.com`) would also solve it,
 > since those share a registrable domain. Switch to that later and the proxy
 > rewrites can go away.
