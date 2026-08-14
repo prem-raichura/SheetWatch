@@ -75,22 +75,26 @@ fall back if it's missing, it hard-errors.
 Migrations run automatically on every API deploy, via `server/vercel.json`:
 
 ```json
-"buildCommand": "prisma generate && prisma migrate deploy && mkdir -p public",
+"buildCommand": "prisma generate && prisma migrate deploy",
 "outputDirectory": "public",
 ```
 
-The `mkdir` looks odd and is load-bearing. Defining any `buildCommand` makes
-Vercel look for a static output directory once the build finishes, and this
-build produces none — it only generates the Prisma client and migrates. Without
-it the deploy fails with:
+### Why `server/public/index.html` exists
+
+Defining any `buildCommand` makes Vercel look for a static output directory once
+the build finishes — and this build produces none, it only generates the Prisma
+client and migrates. Vercel rejects both a missing directory *and* an empty one:
 
 ```
 Error: No Output Directory named "public" found after the Build completed.
+Error: The Output Directory "public" is empty.
 ```
 
-`api/index.ts` deploys as a function regardless of what's in there, and the
-catch-all rewrite sends every path to it, so the directory is empty on purpose
-and stays that way. `mkdir -p` is idempotent, so repeat deploys are fine.
+So `server/public/index.html` is committed to satisfy it. It's a placeholder,
+but not a useless one: Vercel checks the filesystem before applying `rewrites`,
+so it's what you get at the API domain's root, while every other path falls
+through the catch-all rewrite to `api/index.ts`. Don't delete it, and don't add
+files whose names collide with an API route.
 
 ---
 

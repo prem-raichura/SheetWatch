@@ -761,21 +761,25 @@ npx web-push generate-vapid-keys</pre></div>
     <div class="note warn">
       <span class="note-label">If the build fails on the output directory</span>
       <p>
-        <code>Error: No Output Directory named "public" found after the Build
-        completed.</code>
+        <code>Error: No Output Directory named "public" found…</code> or
+        <code>Error: The Output Directory "public" is empty.</code>
       </p>
       <p>
         Defining any <code>buildCommand</code> makes Vercel look for static
         output afterwards, and this build produces none — it only generates the
-        Prisma client and migrates. <code>server/vercel.json</code> handles it by
-        creating an empty directory:
+        Prisma client and migrates. Vercel rejects a missing directory
+        <em>and</em> an empty one, so the repo commits
+        <code>server/public/index.html</code> to satisfy it.
       </p>
-      <div class="code"><pre>"buildCommand": "prisma generate &amp;&amp; prisma migrate deploy &amp;&amp; mkdir -p public",
-"outputDirectory": "public",</pre></div>
       <p>
-        The directory is empty on purpose and stays that way —
-        <code>api/index.ts</code> deploys as a function regardless, and the
-        catch-all rewrite sends every path to it.
+        Confirm that file exists and isn't ignored, and that
+        <code>server/vercel.json</code> has
+        <code>"outputDirectory": "public"</code>.
+      </p>
+      <p>
+        It isn't dead weight: Vercel checks the filesystem before applying
+        rewrites, so it's what you get at the API domain's root, while every
+        other path falls through to <code>api/index.ts</code>.
       </p>
     </div>
 
@@ -1145,9 +1149,9 @@ docker compose logs --tail=20 worker              <span class="c"># on the VM</s
             <td class="wrap">iOS only delivers web push after Share → Add to Home Screen, opened from the home-screen icon.</td>
           </tr>
           <tr>
-            <td class="wrap">Build: <code>No Output Directory named "public"</code></td>
+            <td class="wrap">Build: output directory missing or <code>empty</code></td>
             <td class="wrap">A <code>buildCommand</code> that emits no static files</td>
-            <td class="wrap">Ensure <code>server/vercel.json</code> ends its build with <code>&amp;&amp; mkdir -p public</code> and sets <code>"outputDirectory": "public"</code>. The directory stays empty by design.</td>
+            <td class="wrap">Vercel needs a non-empty output dir. Confirm <code>server/public/index.html</code> is committed and <code>server/vercel.json</code> sets <code>"outputDirectory": "public"</code>.</td>
           </tr>
           <tr>
             <td class="wrap">Prisma errors on <code>DIRECT_URL</code></td>

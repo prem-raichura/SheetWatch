@@ -1,5 +1,5 @@
 {
-  "buildCommand": "prisma generate && prisma migrate deploy && mkdir -p public",
+  "buildCommand": "prisma generate && prisma migrate deploy",
   "outputDirectory": "public",
   "installCommand": "npm install",
   "functions": {
