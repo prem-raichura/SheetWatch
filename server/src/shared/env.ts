@@ -2,7 +2,6 @@ import "dotenv/config";
 
 const required = [
   "DATABASE_URL",
-  "REDIS_URL",
   "SESSION_SECRET",
   "TOKEN_ENCRYPTION_KEY",
   "GOOGLE_CLIENT_ID",
@@ -10,6 +9,11 @@ const required = [
   "GOOGLE_REDIRECT_URI",
   "FRONTEND_URL",
 ];
+
+// Redis backs BullMQ and nothing else, so it's required only in the mode that
+// actually runs a worker. The serverless deployment drives everything from
+// QStash → /api/cron/poll and never touches it.
+if (process.env.WORKER_MODE === "bullmq") required.push("REDIS_URL");
 
 for (const key of required) {
   if (!process.env[key]) throw new Error(`Missing required env var: ${key}`);
@@ -37,8 +41,15 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-// CRON_SECRET is optional (only the Vercel cron path needs it) but guards the
-// unauthenticated /api/cron/poll endpoint — warn loudly if a deploy forgot it.
+// CRON_SECRET is the bearer token an external scheduler presents to
+// /api/cron/poll and /api/cron/maintenance — the only thing standing in front
+// of otherwise unauthenticated endpoints. It is optional: in the default
+// deployment a separate worker process owns the recurring work and these
+// endpoints go unused. Only a deployment with no worker depends on them, and
+// there a missing secret is a silent outage.
 if (!process.env.CRON_SECRET) {
-  console.warn("CRON_SECRET is not set — the /api/cron/poll endpoint will reject all calls.");
+  console.warn(
+    "CRON_SECRET is not set — /api/cron/* will reject every call. Fine if a " +
+      "BullMQ worker process owns polling; a silent outage if nothing else does."
+  );
 }

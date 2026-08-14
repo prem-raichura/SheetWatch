@@ -3,7 +3,25 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/auth/:path*",
+      "destination": "https://sheetwatch-api.vercel.app/auth/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://sheetwatch-api.vercel.app/api/:path*"
+    },
+    {
+      "source": "/public/:path*",
+      "destination": "https://sheetwatch-api.vercel.app/public/:path*"
+    },
+    {
+      "source": "/healthz",
+      "destination": "https://sheetwatch-api.vercel.app/healthz"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/service-worker.js",

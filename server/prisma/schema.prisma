@@ -4,7 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime connection. On Vercel this is Neon's *pooled* endpoint
+  // (…-pooler.…neon.tech, ?pgbouncer=true&connection_limit=1) so serverless
+  // invocations can't exhaust Postgres. The worker VM uses the direct endpoint.
+  url = env("DATABASE_URL")
+  // Migrations need a real session (advisory locks, DDL) — always the direct,
+  // non-pooled endpoint. Required in every environment: Prisma does NOT fall
+  // back to DATABASE_URL, it errors. Locally just set it to the same value.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

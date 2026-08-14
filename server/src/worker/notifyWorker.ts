@@ -1,5 +1,5 @@
 import { Worker, Job } from "bullmq";
-import { connection } from "../shared/redis";
+import { getConnection } from "../shared/redis";
 import { notifySheetChange } from "../shared/poll";
 
 interface NotifyJobData {
@@ -14,6 +14,6 @@ export function createNotifyWorker() {
       const { sheetId, changeLogId } = job.data;
       await notifySheetChange(sheetId, changeLogId);
     },
-    { connection }
+    { connection: getConnection() }
   );
 }

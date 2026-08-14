@@ -1,0 +1,48 @@
+# Hetzner VM deployment — the worker and its Redis, nothing else.
+#
+#   cp .env.example .env.production   # fill it in, see DEPLOY.md §5
+#   docker compose up -d --build
+#   docker compose logs -f worker
+#
+# Postgres is Neon, so this is two containers. Neither publishes a port: Redis
+# is reachable only on the compose network and the worker only makes outbound
+# connections, so the VM needs no inbound firewall rule beyond SSH.
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Persist so a restart doesn't drop the repeatable job schedulers. Losing
+    # them is survivable — the worker's reconcile rebuilds every one within a
+    # minute — but there's no reason to make it re-derive on every reboot.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build: .
+    image: sheetwatch-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      WORKER_MODE: bullmq
+      # Overrides whatever .env.production says — Redis lives on the compose
+      # network under its service name, never on localhost or a public address.
+      REDIS_URL: redis://redis:6379
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  redis-data:

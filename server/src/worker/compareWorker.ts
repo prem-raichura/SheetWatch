@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { connection } from "../shared/redis";
+import { getConnection } from "../shared/redis";
 import { recomputeAllGroups } from "../shared/compare";
 
 // Dedicated worker for the comparison feature: the repeatable `compare:sweep`
@@ -11,6 +11,6 @@ export function createCompareWorker() {
     async () => {
       await recomputeAllGroups();
     },
-    { connection, concurrency: 1 }
+    { connection: getConnection(), concurrency: 1 }
   );
 }

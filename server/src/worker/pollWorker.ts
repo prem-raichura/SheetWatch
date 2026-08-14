@@ -1,5 +1,5 @@
 import { Worker, Job } from "bullmq";
-import { connection } from "../shared/redis";
+import { getConnection } from "../shared/redis";
 import { pollSheet } from "../shared/poll";
 import { notifyQueue } from "../shared/queues";
 
@@ -15,13 +15,13 @@ export function createPollWorker() {
 
       const changeLogId = await pollSheet(sheetId);
       if (changeLogId) {
-        await notifyQueue.add(
+        await notifyQueue().add(
           "notify",
           { sheetId, changeLogId },
           { removeOnComplete: true, removeOnFail: 100 }
         );
       }
     },
-    { connection, concurrency: 5 }
+    { connection: getConnection(), concurrency: 5 }
   );
 }
