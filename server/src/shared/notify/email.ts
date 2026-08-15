@@ -57,7 +57,11 @@ export async function sendEmail(
   payload: NotifyPayload,
   attachments?: EmailAttachment[]
 ): Promise<void> {
+  // Logo is linked, not inlined — mail clients strip data: URIs.
+  const logo = `${process.env.FRONTEND_URL ?? ""}/icons/icon-96.png`;
   const html = `
+    <p><img src="${escapeHtml(logo)}" alt="SheetWatch" width="32" height="32"
+       style="display:block;border:0" /></p>
     <h2>${escapeHtml(payload.title)}</h2>
     <p>${escapeHtml(payload.body)}</p>
     <p><a href="${escapeHtml(payload.url)}">Open sheet →</a></p>

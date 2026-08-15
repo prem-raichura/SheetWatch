@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — SheetWatch</title>
+<meta name="description" content="SheetWatch privacy policy: exactly which Google OAuth scopes we request, what Google user data we access, how long we store spreadsheet snapshots, who we share data with, and how to delete your account. Includes our Google API Services Limited Use disclosure." />
+<link rel="canonical" href="https://sheet-watch.vercel.app/privacy" />
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+<meta name="author" content="Prem Raichura" />
+<meta name="last-modified" content="2026-08-15" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="SheetWatch" />
+<meta property="og:title" content="Privacy Policy — SheetWatch" />
+<meta property="og:description" content="How SheetWatch accesses, uses, stores, and shares Google user data — including our Limited Use disclosure and data deletion process." />
+<meta property="og:url" content="https://sheet-watch.vercel.app/privacy" />
+<meta property="og:image" content="https://sheet-watch.vercel.app/icons/icon-512.png" />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Privacy Policy — SheetWatch" />
+<meta name="twitter:description" content="How SheetWatch accesses, uses, stores, and shares Google user data." />
+<meta name="twitter:image" content="https://sheet-watch.vercel.app/icons/icon-512.png" />
+
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#0FA3A3" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://sheet-watch.vercel.app/#website",
+      "url": "https://sheet-watch.vercel.app/",
+      "name": "SheetWatch",
+      "description": "SheetWatch monitors Google Sheets for cell-level changes and sends notifications by web push, email, Slack, Discord, Telegram, or webhook.",
+      "publisher": { "@id": "https://sheet-watch.vercel.app/#publisher" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://sheet-watch.vercel.app/#publisher",
+      "name": "Prem Raichura",
+      "email": "premraichura7@gmail.com",
+      "jobTitle": "Independent software developer",
+      "address": { "@type": "PostalAddress", "addressCountry": "IN" }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://sheet-watch.vercel.app/privacy#webpage",
+      "url": "https://sheet-watch.vercel.app/privacy",
+      "name": "Privacy Policy — SheetWatch",
+      "description": "SheetWatch privacy policy covering Google OAuth scopes, Google user data handling, retention periods, subprocessors, security, user rights, and account deletion.",
+      "isPartOf": { "@id": "https://sheet-watch.vercel.app/#website" },
+      "about": { "@id": "https://sheet-watch.vercel.app/#publisher" },
+      "datePublished": "2026-08-15",
+      "dateModified": "2026-08-15",
+      "inLanguage": "en",
+      "breadcrumb": { "@id": "https://sheet-watch.vercel.app/privacy#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://sheet-watch.vercel.app/privacy#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "SheetWatch", "item": "https://sheet-watch.vercel.app/" },
+        { "@type": "ListItem", "position": 2, "name": "Privacy Policy", "item": "https://sheet-watch.vercel.app/privacy" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://sheet-watch.vercel.app/privacy#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does SheetWatch sell or share Google user data?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. SheetWatch does not sell, rent, or trade Google user data, and does not transfer it to advertisers, data brokers, or credit bureaus. Google user data is never used to train artificial intelligence or machine learning models." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which Google OAuth scopes does SheetWatch request?",
+          "acceptedAnswer": { "@type": "Answer", "text": "SheetWatch requests four scopes: https://www.googleapis.com/auth/spreadsheets to read watched ranges and write accepted suggestions, https://www.googleapis.com/auth/drive to list your spreadsheets and move a spreadsheet to trash on request, plus the standard email and profile scopes to identify your account." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SheetWatch store the contents of my spreadsheets?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, but only the cell range you choose to watch. SheetWatch stores point-in-time snapshots of that range so it can compute a before-and-after difference. Snapshots are pruned automatically: the 50 most recent per sheet are kept, and beyond a 7-day detail window only one snapshot per day is retained." }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I delete my SheetWatch account and data?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Open Settings, then Account, then Danger zone, and choose Delete account. You confirm by typing your account email. Deletion is immediate and permanent: SheetWatch revokes its Google grant and erases your account record, OAuth tokens, tracked sheets, snapshots, change history, widgets, webhooks, share links, and notification logs. Your spreadsheets are never touched and stay in your Google Drive. You can also email premraichura7@gmail.com if you prefer we handle it." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SheetWatch use tracking cookies or analytics?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. SheetWatch sets exactly one cookie, a signed session cookie named sw_session, which is strictly necessary to keep you signed in. There are no analytics, advertising, or third-party tracking cookies, and no cross-site tracking pixels." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can SheetWatch edit my spreadsheets?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Only in two situations that you trigger yourself: when you explicitly accept a cross-sheet suggestion in the Compare feature, SheetWatch writes that single cell value to the target sheet; and when you choose to remove a spreadsheet from the Sheets page, SheetWatch moves that file to your Google Drive trash. SheetWatch never edits sheets during routine monitoring." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f4;
+    --ink: #171b23;
+    --ink-2: #454c5a;
+    --ink-3: #737c8c;
+    --line: #dfe3ea;
+    --line-2: #c8cede;
+    --accent: #0b8c8c;
+    --accent-deep: #076a6a;
+    --accent-soft: #e2f2f1;
+    --warn: #8a5a1c;
+    --warn-soft: #fbf1e2;
+    --warn-line: #e6c9a2;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --maxw: 1180px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216;
+      --surface: #161a21;
+      --surface-2: #1d222b;
+      --ink: #e9edf3;
+      --ink-2: #b3bcca;
+      --ink-3: #838d9d;
+      --line: #262c37;
+      --line-2: #333b49;
+      --accent: #2fc0bc;
+      --accent-deep: #5fd6d2;
+      --accent-soft: #122a2c;
+      --warn: #d9a763;
+      --warn-soft: #2a2214;
+      --warn-line: #4a3a1e;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent-deep); }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: .85rem 1.5rem;
+    display: flex; align-items: center; gap: .9rem; flex-wrap: wrap;
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-weight: 700; color: var(--ink); text-decoration: none; font-size: .95rem;
+  }
+  .brand svg { display: block; }
+  .topnav { margin-left: auto; display: flex; gap: 1.1rem; font-size: .85rem; }
+  .topnav a { color: var(--ink-3); text-decoration: none; font-weight: 500; }
+  .topnav a:hover, .topnav a[aria-current="page"] { color: var(--accent); }
+
+  /* ---------- layout ---------- */
+  .shell { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem 5rem; }
+  .masthead { padding: 3rem 0 1.75rem; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.15; margin: .45rem 0 .8rem;
+    color: var(--ink); letter-spacing: -.02em; font-weight: 700;
+  }
+  .lede { font-size: 1.05rem; max-width: 62ch; margin: 0 0 1.2rem; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: .5rem; font-family: var(--mono); font-size: .74rem;
+  }
+  .meta span {
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink-3);
+    padding: .3rem .6rem; border-radius: 999px;
+  }
+
+  .cols { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 3rem; padding-top: 2.5rem; }
+  /* minmax(0,…) not 1fr: a bare 1fr resolves to minmax(auto,1fr), which lets the
+     min-width tables blow the column past the viewport and scroll the whole page. */
+  @media (max-width: 940px) { .cols { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
+
+  /* ---------- toc ---------- */
+  .toc { position: sticky; top: 5rem; align-self: start; max-height: calc(100vh - 7rem); overflow-y: auto; }
+  @media (max-width: 940px) {
+    .toc {
+      position: static; max-height: none; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.25rem;
+    }
+  }
+  .toc h2 {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 .7rem; font-weight: 600;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; margin: 0; }
+  .toc a {
+    display: block; padding: .3rem 0 .3rem 1.9rem; position: relative;
+    font-size: .845rem; line-height: 1.4; color: var(--ink-2); text-decoration: none;
+    border-left: 2px solid transparent; margin-left: -2px;
+  }
+  .toc a::before {
+    content: counter(toc); position: absolute; left: .45rem; top: .3rem;
+    font-family: var(--mono); font-size: .7rem; color: var(--ink-3);
+  }
+  .toc a:hover { color: var(--accent); border-left-color: var(--line-2); }
+
+  /* ---------- article ---------- */
+  article { min-width: 0; }
+  section { scroll-margin-top: 5rem; padding-top: .5rem; }
+  section + section { margin-top: 2.75rem; }
+  h2 {
+    font-size: 1.35rem; color: var(--ink); letter-spacing: -.01em; font-weight: 700;
+    margin: 0 0 .35rem; line-height: 1.3;
+  }
+  h2 .num {
+    font-family: var(--mono); font-size: .8rem; color: var(--accent);
+    margin-right: .55rem; font-weight: 600;
+  }
+  h3 {
+    font-size: 1rem; color: var(--ink); margin: 1.75rem 0 .4rem; font-weight: 650;
+  }
+  p { margin: .75rem 0; }
+  ul, ol { margin: .75rem 0; padding-left: 1.3rem; }
+  li { margin: .4rem 0; }
+  strong { color: var(--ink); font-weight: 650; }
+  code {
+    font-family: var(--mono); font-size: .86em; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 5px; padding: .1em .38em;
+    color: var(--ink); word-break: break-word;
+  }
+
+  .tldr {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; padding: 1.4rem 1.6rem; margin: 0 0 .5rem;
+  }
+  .tldr h2 { font-size: 1rem; margin-bottom: .6rem; }
+  .tldr ul { margin: 0; padding-left: 1.15rem; }
+  .tldr li { margin: .45rem 0; font-size: .95rem; }
+
+  .callout {
+    border: 1px solid var(--line-2); border-left: 3px solid var(--accent);
+    background: var(--accent-soft); border-radius: 0 12px 12px 0;
+    padding: 1rem 1.25rem; margin: 1.25rem 0;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); }
+
+  .table-wrap { overflow-x: auto; margin: 1.1rem 0; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .89rem; background: var(--surface); }
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    background: var(--surface-2); color: var(--ink); font-weight: 650;
+    font-size: .76rem; letter-spacing: .05em; text-transform: uppercase;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .82em; }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: .68rem; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; padding: .16rem .5rem;
+    border-radius: 999px; border: 1px solid var(--warn-line); background: var(--warn-soft); color: var(--warn);
+    white-space: nowrap;
+  }
+  .pill.ok { border-color: var(--line-2); background: var(--accent-soft); color: var(--accent-deep); }
+
+  .faq { border-top: 1px solid var(--line); }
+  .faq details {
+    border-bottom: 1px solid var(--line); padding: .25rem 0;
+  }
+  .faq summary {
+    cursor: pointer; padding: .9rem 0; font-weight: 600; color: var(--ink);
+    list-style: none; display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; font-family: var(--mono); color: var(--accent); font-size: 1.1rem; }
+  .faq details[open] summary::after { content: "\2013"; }
+  .faq details > p { margin-top: 0; padding-bottom: .5rem; }
+
+  footer {
+    border-top: 1px solid var(--line); margin-top: 4rem; padding: 2rem 0 0;
+    font-size: .85rem; color: var(--ink-3);
+  }
+  footer a { color: var(--ink-3); }
+  footer a:hover { color: var(--accent); }
+  .foot-links { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: .8rem; }
+
+  @media print {
+    .topbar, .toc, .faq summary::after { display: none; }
+    .cols { grid-template-columns: 1fr; }
+    body { background: #fff; font-size: 11pt; }
+    .faq details { display: block; }
+    a { text-decoration: none; color: inherit; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+        <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" />
+        <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" />
+        <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" />
+        <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.35" />
+      </svg>
+      SheetWatch
+    </a>
+    <nav class="topnav">
+      <a href="/">App</a>
+      <a href="/privacy" aria-current="page">Privacy</a>
+      <a href="/terms">Terms</a>
+    </nav>
+  </div>
+</div>
+
+<div class="shell">
+
+  <header class="masthead">
+    <span class="eyebrow">SheetWatch · Legal</span>
+    <h1>Privacy Policy</h1>
+    <p class="lede">
+      This policy explains what data SheetWatch collects, how Google user data is accessed
+      and stored, who it is shared with, how long it is kept, and how to delete it.
+    </p>
+    <div class="meta">
+      <span>Effective 15 August 2026</span>
+      <span>Last updated 15 August 2026</span>
+      <span>Version 1.0</span>
+    </div>
+  </header>
+
+  <div class="cols">
+
+    <aside class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#controller">Who we are</a></li>
+        <li><a href="#scope">Scope of this policy</a></li>
+        <li><a href="#google-data">Google user data</a></li>
+        <li><a href="#limited-use">Limited Use disclosure</a></li>
+        <li><a href="#other-data">Other data we collect</a></li>
+        <li><a href="#purposes">Why we process data</a></li>
+        <li><a href="#legal-basis">Legal bases</a></li>
+        <li><a href="#cookies">Cookies</a></li>
+        <li><a href="#sharing">Sharing and subprocessors</a></li>
+        <li><a href="#share-links">Public share links</a></li>
+        <li><a href="#retention">Retention</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#transfers">International transfers</a></li>
+        <li><a href="#rights">Your rights</a></li>
+        <li><a href="#deletion">Deleting your data</a></li>
+        <li><a href="#children">Children</a></li>
+        <li><a href="#changes">Changes</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <section id="summary">
+        <div class="tldr">
+          <h2>Summary</h2>
+          <ul>
+            <li><strong>SheetWatch is a Google Sheets change-monitoring service.</strong> It polls spreadsheet ranges you select, detects cell-level changes, and notifies you.</li>
+            <li><strong>We never sell your data.</strong> Google user data is not sold, rented, or shared with advertisers, data brokers, or credit bureaus.</li>
+            <li><strong>We never train AI on your data.</strong> Google user data is not used to develop, improve, or train generalized artificial intelligence or machine learning models.</li>
+            <li><strong>We store the cell ranges you choose to watch.</strong> This is required to compute before-and-after differences. Nothing outside your selected range is stored.</li>
+            <li><strong>One cookie only.</strong> A strictly necessary signed session cookie. No analytics, no advertising, no tracking pixels.</li>
+            <li><strong>You can revoke access instantly</strong> at <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer" target="_blank">myaccount.google.com/permissions</a>, and request full deletion by email.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="controller">
+        <h2><span class="num">01</span>Who we are</h2>
+        <p>
+          SheetWatch ("SheetWatch", "the Service", "we", "us") is operated by
+          <strong>Prem Raichura</strong>, an independent software developer based in India,
+          acting as the data controller for personal data processed through the Service.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr><th scope="row">Service name</th><td>SheetWatch</td></tr>
+              <tr><th scope="row">Operator</th><td>Prem Raichura (individual developer)</td></tr>
+              <tr><th scope="row">Country</th><td>India</td></tr>
+              <tr><th scope="row">Service URL</th><td><code>https://sheet-watch.vercel.app</code></td></tr>
+              <tr><th scope="row">Privacy contact</th><td><a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="scope">
+        <h2><span class="num">02</span>Scope of this policy</h2>
+        <p>
+          This policy applies to the SheetWatch web application hosted at
+          <code>https://sheet-watch.vercel.app</code>, its supporting API, and its background
+          monitoring workers. It covers everyone who signs in with a Google account, as well as
+          anyone who opens a public SheetWatch share link.
+        </p>
+        <p>
+          This policy does not cover Google Sheets, Google Drive, or any other Google product. Your
+          use of those products is governed by
+          <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">Google's Privacy Policy</a>.
+          It also does not cover third-party destinations you choose to send notifications to, such
+          as a Slack or Discord workspace; once a notification is delivered there, that platform's
+          own privacy policy applies.
+        </p>
+      </section>
+
+      <section id="google-data">
+        <h2><span class="num">03</span>Google user data</h2>
+        <p>
+          SheetWatch signs you in with Google OAuth 2.0. We never see, receive, or store your Google
+          password. During sign-in, Google shows you a consent screen listing the permissions below,
+          and you can decline at any point.
+        </p>
+
+        <h3>Scopes we request, and why</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>OAuth scope</th><th>Sensitivity</th><th>Why SheetWatch needs it</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>.../auth/spreadsheets</code></td>
+                <td><span class="pill">Restricted</span></td>
+                <td>
+                  <strong>Read:</strong> fetch the cell range you chose to watch, on the interval you
+                  chose, so changes can be detected.<br />
+                  <strong>Write:</strong> used only when you explicitly accept a cross-sheet suggestion
+                  in the Compare feature, which writes that one value into the target cell.
+                </td>
+              </tr>
+              <tr>
+                <td><code>.../auth/drive</code></td>
+                <td><span class="pill">Restricted</span></td>
+                <td>
+                  List the spreadsheets you own or that are shared with you, so you can pick one to
+                  watch without pasting a URL; read spreadsheet titles and modification timestamps;
+                  and move a spreadsheet to your Drive trash when you choose to remove it.
+                </td>
+              </tr>
+              <tr>
+                <td><code>email</code></td>
+                <td><span class="pill ok">Basic</span></td>
+                <td>Identify your account, keep your watch list attached to it, and deliver email notifications and scheduled reports.</td>
+              </tr>
+              <tr>
+                <td><code>profile</code></td>
+                <td><span class="pill ok">Basic</span></td>
+                <td>Read your Google account identifier so returning sign-ins map to the same SheetWatch account.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>What we store</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Data</th><th>Stored?</th><th>Detail</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Google account email</td><td>Yes</td><td>Your account identifier and the default destination for email notifications.</td></tr>
+              <tr><td>Google account ID</td><td>Yes</td><td>An opaque, stable identifier issued by Google.</td></tr>
+              <tr><td>OAuth access and refresh tokens</td><td>Yes</td><td>Encrypted at rest with AES-256-GCM. Required so background monitoring can run while your browser is closed.</td></tr>
+              <tr><td>Spreadsheet IDs, tab names, cell ranges</td><td>Yes</td><td>The configuration describing what you asked us to watch.</td></tr>
+              <tr><td>Cell values inside your watched range</td><td>Yes</td><td>Stored as point-in-time snapshots so a change can be diffed against the previous state. See <a href="#retention">Retention</a>.</td></tr>
+              <tr><td>Change history</td><td>Yes</td><td>A summary and structured detail of each detected change, such as which cell moved from which value to which value.</td></tr>
+              <tr><td>Cell values outside your watched range</td><td>No</td><td>Never fetched and never stored.</td></tr>
+              <tr><td>Google password</td><td>No</td><td>Never transmitted to or seen by SheetWatch.</td></tr>
+              <tr><td>Drive files that are not spreadsheets</td><td>No</td><td>Not read and not stored.</td></tr>
+              <tr><td>Google contacts, calendar, or Gmail</td><td>No</td><td>Not requested and not accessible.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warn">
+          <p>
+            <strong>On the breadth of the Drive scope.</strong> The <code>drive</code> scope
+            technically grants access to all files in your Google Drive. SheetWatch's code only ever
+            queries spreadsheet files, reads their titles and modification times, and — at your
+            explicit request — moves a spreadsheet to trash. We do not read, download, index, or
+            store any other file. If you prefer to grant less, you can watch sheets by pasting a URL
+            instead of browsing, and revoke access at any time.
+          </p>
+        </div>
+
+        <h3>What we do not do with Google user data</h3>
+        <ul>
+          <li>We do not sell it, rent it, or trade it.</li>
+          <li>We do not transfer it to advertising platforms, data brokers, information resellers, or credit bureaus.</li>
+          <li>We do not use it to serve, target, or measure advertisements.</li>
+          <li>We do not use it to develop, improve, or train generalized artificial intelligence or machine learning models.</li>
+          <li>We do not allow humans to read it, except in the narrow cases listed in the next section.</li>
+        </ul>
+
+        <h3>Human access</h3>
+        <p>A human being reads your Google user data only when one of these is true:</p>
+        <ul>
+          <li>You give explicit, specific consent — for example, you send us a screenshot or ask us to debug a particular sheet.</li>
+          <li>It is necessary for security purposes, such as investigating a suspected abuse or an active vulnerability.</li>
+          <li>It is required to comply with applicable law.</li>
+          <li>The data is aggregated and fully anonymised, and is used for internal operations such as capacity planning.</li>
+        </ul>
+      </section>
+
+      <section id="limited-use">
+        <h2><span class="num">04</span>Google API Services Limited Use disclosure</h2>
+        <div class="callout">
+          <p>
+            SheetWatch's use and transfer of information received from Google APIs to any other app
+            will adhere to the
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer" target="_blank">Google API Services User Data Policy</a>,
+            including the
+            <a href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes" rel="noopener noreferrer" target="_blank">Limited Use requirements</a>.
+          </p>
+        </div>
+        <p>
+          Concretely, this means SheetWatch limits its use of data obtained through Google APIs to
+          providing and improving the user-facing features that are prominently described in the
+          SheetWatch interface — monitoring the sheets you select, detecting changes, showing you
+          history, and sending you notifications. Any other use requires your explicit consent.
+        </p>
+      </section>
+
+      <section id="other-data">
+        <h2><span class="num">05</span>Other data we collect</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Category</th><th>Examples</th><th>Source</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Watch configuration</td>
+                <td>Poll interval, tab and range scope, row-match rules, alert rules, pause and snooze state, project grouping, labels and colours</td>
+                <td>You</td>
+              </tr>
+              <tr>
+                <td>Notification settings</td>
+                <td>Web push subscription endpoint and encryption keys, webhook URLs for Slack, Discord, or a generic endpoint, Telegram chat ID, quiet-hours window, digest cadence</td>
+                <td>You</td>
+              </tr>
+              <tr>
+                <td>Delivery logs</td>
+                <td>Channel used, destination label, notification title and body, status, error message, retry count, timestamps</td>
+                <td>Generated by the Service</td>
+              </tr>
+              <tr>
+                <td>Interface preferences</td>
+                <td>Theme, accent colour, density, font scale, animation setting, default landing tab, time format</td>
+                <td>You</td>
+              </tr>
+              <tr>
+                <td>Dashboard objects</td>
+                <td>KPI widgets, chart widgets, comparison groups, scheduled report settings, share links and their view counts</td>
+                <td>You</td>
+              </tr>
+              <tr>
+                <td>Technical logs</td>
+                <td>IP address, request time, user agent, error traces. Used for rate limiting, abuse prevention, and debugging.</td>
+                <td>Automatic</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Some interface preferences are also cached in your browser's <code>localStorage</code> under
+          the key <code>sw:prefs</code> so the correct theme paints before the app loads. That data
+          stays on your device and is cleared when you clear site data.
+        </p>
+      </section>
+
+      <section id="purposes">
+        <h2><span class="num">06</span>Why we process data</h2>
+        <ul>
+          <li><strong>To run the core feature.</strong> Fetch your watched range on schedule, compare it to the previous snapshot, and record what changed.</li>
+          <li><strong>To notify you.</strong> Send web push, email, Slack, Discord, generic webhook, or Telegram messages according to the rules you configured.</li>
+          <li><strong>To show history.</strong> Render change timelines, KPI tiles, charts, and comparison suggestions.</li>
+          <li><strong>To deliver scheduled reports.</strong> Generate PDF or CSV summaries and email them on your chosen cadence.</li>
+          <li><strong>To keep you signed in.</strong> Maintain an authenticated session.</li>
+          <li><strong>To keep the Service safe and available.</strong> Rate limiting, abuse detection, error monitoring, and capacity planning.</li>
+          <li><strong>To comply with law.</strong> Respond to valid legal process and enforce our Terms.</li>
+        </ul>
+      </section>
+
+      <section id="legal-basis">
+        <h2><span class="num">07</span>Legal bases for processing</h2>
+        <p>
+          Where the EU or UK GDPR applies, we rely on the following legal bases. Where India's
+          Digital Personal Data Protection Act, 2023 applies, we process personal data on the basis
+          of the consent you give when you connect your Google account and configure the Service.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Processing</th><th>Legal basis</th></tr></thead>
+            <tbody>
+              <tr><td>Reading and storing your watched sheet data to detect changes</td><td>Performance of a contract</td></tr>
+              <tr><td>Sending notifications you configured</td><td>Performance of a contract</td></tr>
+              <tr><td>Connecting your Google account and requesting OAuth scopes</td><td>Consent</td></tr>
+              <tr><td>Optional integrations such as Telegram or webhooks</td><td>Consent</td></tr>
+              <tr><td>Security logging, rate limiting, and abuse prevention</td><td>Legitimate interests</td></tr>
+              <tr><td>Responding to legal requests</td><td>Legal obligation</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="cookies">
+        <h2><span class="num">08</span>Cookies</h2>
+        <p>SheetWatch sets exactly one cookie. There are no analytics, advertising, or tracking cookies, and no third-party tracking pixels.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Purpose</th><th>Attributes</th><th>Lifetime</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>sw_session</code></td>
+                <td>Strictly necessary. Holds your signed session so you stay logged in, and carries a one-time state value that protects the OAuth sign-in against cross-site request forgery.</td>
+                <td><code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=None</code>, cryptographically signed</td>
+                <td>30 days</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The cookie is <code>HttpOnly</code>, so page scripts cannot read it, and
+          <code>SameSite=None; Secure</code> because the app front end and its API are served from
+          different origins. Because this cookie is strictly necessary to deliver a service you
+          requested, no consent banner is required for it.
+        </p>
+      </section>
+
+      <section id="sharing">
+        <h2><span class="num">09</span>Sharing and subprocessors</h2>
+        <p>
+          We do not sell your data. We share it only with infrastructure providers that operate the
+          Service on our behalf, and with destinations you explicitly configure.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Provider</th><th>Role</th><th>Data involved</th></tr></thead>
+            <tbody>
+              <tr><td>Google LLC</td><td>OAuth sign-in, Sheets API, Drive API</td><td>Your Google identity and the spreadsheet data you asked us to watch</td></tr>
+              <tr><td>Vercel Inc.</td><td>Web and API hosting</td><td>All request traffic, including IP addresses</td></tr>
+              <tr><td>Neon Inc.</td><td>Managed PostgreSQL database</td><td>All stored account, configuration, snapshot, and log data</td></tr>
+              <tr><td>Cloudflare, Inc.</td><td>Realtime WebSocket delivery</td><td>Live update events for your open browser tabs</td></tr>
+              <tr><td>Upstash, Inc.</td><td>Scheduled job triggers and queueing</td><td>Job metadata; no spreadsheet contents</td></tr>
+              <tr><td>Resend, Inc. or your configured SMTP provider</td><td>Email delivery</td><td>Your email address, notification text, and report attachments</td></tr>
+              <tr><td>Browser push services (Google FCM, Mozilla, Apple)</td><td>Web push transport</td><td>Encrypted push payload and your push endpoint, determined by your browser vendor</td></tr>
+              <tr><td>Telegram FZ-LLC</td><td>Telegram notifications, only if you enable it</td><td>Your chat ID and notification text</td></tr>
+              <tr><td>Slack, Discord, or your own endpoint</td><td>Webhook notifications, only if you configure them</td><td>Notification text sent to the URL you supplied</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          We may also disclose data if required by valid legal process, to enforce our
+          <a href="/terms">Terms of Service</a>, or to protect the rights, safety, and property of
+          our users or the public. If the Service is ever transferred to another operator, we will
+          give notice in the app before your data moves, and you will be able to delete your account
+          first.
+        </p>
+      </section>
+
+      <section id="share-links">
+        <h2><span class="num">10</span>Public share links</h2>
+        <div class="callout warn">
+          <p>
+            SheetWatch lets you publish a read-only board of selected KPI widgets at a secret URL.
+            <strong>Anyone holding that URL can view it without signing in.</strong> The link is
+            unguessable, but it is not access-controlled — treat it like a public web page and do not
+            share metrics you would not want a stranger to see.
+          </p>
+        </div>
+        <p>
+          A share link exposes only the widget values you selected, plus the title you gave the
+          board. It does not expose your email address, your other sheets, or your account settings.
+          We record a view counter per link. You can revoke a link at any time in
+          <strong>Settings → Share links</strong>, which immediately stops it from resolving.
+        </p>
+      </section>
+
+      <section id="retention">
+        <h2><span class="num">11</span>Retention</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data</th><th>Kept for</th></tr></thead>
+            <tbody>
+              <tr><td>Account record, OAuth tokens, preferences</td><td>Until you delete your account or revoke access</td></tr>
+              <tr><td>Watch configuration</td><td>Until you delete the watch or your account</td></tr>
+              <tr><td>Snapshots of watched cell ranges</td><td>The 50 most recent per sheet are kept. Beyond a 7-day detail window, only one snapshot per day is retained; the rest are pruned automatically.</td></tr>
+              <tr><td>Change history</td><td>Until you delete the sheet or your account. Archiving a sheet stops monitoring but deliberately keeps its history.</td></tr>
+              <tr><td>Notification delivery logs</td><td>Until you delete your account</td></tr>
+              <tr><td>Revoked share links</td><td>The record is retained after revocation so the view-count history stays intact; the link itself stops working immediately</td></tr>
+              <tr><td>Technical and error logs</td><td>Typically 30 days, subject to our hosting providers' own retention</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Deleting a sheet from SheetWatch cascades to its snapshots, change history, widgets, and
+          webhook associations. Deleting your account cascades to everything listed above.
+        </p>
+      </section>
+
+      <section id="security">
+        <h2><span class="num">12</span>Security</h2>
+        <ul>
+          <li><strong>Token encryption.</strong> Google access and refresh tokens are encrypted at rest with AES-256-GCM using a 32-byte key held outside the database. The Service refuses to start with a weak or placeholder key.</li>
+          <li><strong>Transport encryption.</strong> All traffic between your browser, our API, and Google runs over HTTPS/TLS.</li>
+          <li><strong>Session hardening.</strong> The session cookie is signed, <code>HttpOnly</code>, and <code>Secure</code>. Signing keys can be rotated without logging users out.</li>
+          <li><strong>CSRF protection.</strong> The OAuth round-trip is bound to your browser session with a one-time <code>state</code> value.</li>
+          <li><strong>Server-side request forgery defence.</strong> Outbound webhook URLs are validated to block internal and private network hostnames.</li>
+          <li><strong>Rate limiting.</strong> Authentication and API endpoints are throttled per IP address.</li>
+          <li><strong>Least storage.</strong> Only the cell range you select is ever fetched or retained.</li>
+        </ul>
+        <p>
+          No system is perfectly secure. If you believe you have found a vulnerability, please email
+          <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a> rather than disclosing
+          it publicly, and allow reasonable time for a fix. If a breach affects your personal data,
+          we will notify you and the relevant authority as required by applicable law.
+        </p>
+      </section>
+
+      <section id="transfers">
+        <h2><span class="num">13</span>International transfers</h2>
+        <p>
+          SheetWatch is operated from India and runs on cloud infrastructure whose regions may be
+          located in the United States, the European Union, or elsewhere. Using the Service therefore
+          involves transferring your data across borders. Where the GDPR applies, such transfers rely
+          on the European Commission's Standard Contractual Clauses or an equivalent safeguard offered
+          by the relevant provider. Each provider listed in
+          <a href="#sharing">Sharing and subprocessors</a> maintains its own transfer safeguards.
+        </p>
+      </section>
+
+      <section id="rights">
+        <h2><span class="num">14</span>Your rights</h2>
+        <p>Depending on where you live, you may have the following rights. We honour these requests for all users regardless of location.</p>
+        <ul>
+          <li><strong>Access.</strong> Ask what personal data we hold about you and receive a copy.</li>
+          <li><strong>Rectification.</strong> Ask us to correct inaccurate data. Most fields are directly editable in the app.</li>
+          <li><strong>Erasure.</strong> Ask us to delete your account and all associated data.</li>
+          <li><strong>Portability.</strong> Receive your change history in a machine-readable format. The app also exports reports as CSV.</li>
+          <li><strong>Restriction and objection.</strong> Ask us to pause certain processing, or object to processing based on legitimate interests.</li>
+          <li><strong>Withdraw consent.</strong> Revoke Google access or disable an integration at any time, without affecting processing already carried out.</li>
+          <li><strong>Complain.</strong> Lodge a complaint with your local supervisory authority, or in India with the Data Protection Board.</li>
+        </ul>
+        <p>
+          To exercise any right, email <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a>
+          from the Google account you signed in with. We respond within 30 days. We do not charge a
+          fee, and we do not discriminate against you for exercising a right.
+        </p>
+      </section>
+
+      <section id="deletion">
+        <h2><span class="num">15</span>Deleting your data</h2>
+        <h3>Revoke Google access</h3>
+        <p>
+          Go to <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer" target="_blank">myaccount.google.com/permissions</a>,
+          select SheetWatch, and choose <strong>Remove access</strong>. This takes effect immediately
+          and stops all further reading of your sheets. Any tokens we hold become permanently
+          unusable.
+        </p>
+        <h3>Delete individual items</h3>
+        <p>
+          In the app, deleting a tracked sheet removes its snapshots, change history, and widgets.
+          Revoking a share link disables it instantly.
+        </p>
+        <h3>Delete your entire account, from inside the app</h3>
+        <p>
+          Go to <strong>Settings → Account → Danger zone</strong> and choose
+          <strong>Delete account</strong>. You will be asked to type your account email to confirm.
+          Deletion is immediate and permanent: we revoke SheetWatch's grant on your Google account,
+          then erase your account record, OAuth tokens, watch configuration, snapshots, change
+          history, widgets, webhooks, push subscriptions, scheduled reports, share links, and
+          notification logs. No email, no waiting period, and no request for us to process.
+        </p>
+        <p>
+          Your spreadsheets themselves are never touched by deletion — they remain in your Google
+          Drive exactly as they were.
+        </p>
+        <p>
+          Backups holding residual copies are overwritten on their normal rotation, within 90 days at
+          the outside. If you would rather we handled it, or you have lost access to the account,
+          email <a href="mailto:premraichura7@gmail.com?subject=SheetWatch%20account%20deletion%20request">premraichura7@gmail.com</a>
+          from the Google account you signed in with and we will erase it within 30 days.
+        </p>
+        <div class="callout">
+          <p>
+            Revoking access in your Google account stops SheetWatch from reading anything new, but it
+            does not by itself erase data we already stored. To remove that too, use the in-app
+            deletion above.
+          </p>
+        </div>
+      </section>
+
+      <section id="children">
+        <h2><span class="num">16</span>Children</h2>
+        <p>
+          SheetWatch is not directed at children and is not intended for anyone under 16, or under
+          18 in India where a parent or guardian has not provided verifiable consent. We do not
+          knowingly collect personal data from children. If you believe a child has provided us with
+          personal data, email us and we will delete it.
+        </p>
+      </section>
+
+      <section id="changes">
+        <h2><span class="num">17</span>Changes to this policy</h2>
+        <p>
+          We may update this policy as the Service changes or the law requires. The
+          <strong>Last updated</strong> date at the top always reflects the current version. For
+          material changes — for example, requesting a new OAuth scope or adding a new category of
+          data sharing — we will give notice in the app before the change takes effect, and where
+          the law requires it, ask for your consent again. Continuing to use SheetWatch after a
+          change takes effect means you accept the updated policy.
+        </p>
+      </section>
+
+      <section id="contact">
+        <h2><span class="num">18</span>Contact</h2>
+        <p>
+          For any privacy question, data request, or security report, email
+          <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a>. Please write from the
+          Google account associated with your SheetWatch account so we can verify the request.
+          We aim to acknowledge within 7 days and resolve within 30.
+        </p>
+      </section>
+
+      <section id="faq">
+        <h2><span class="num">19</span>Frequently asked questions</h2>
+        <div class="faq">
+          <details>
+            <summary>Does SheetWatch sell or share my Google data?</summary>
+            <p>No. SheetWatch does not sell, rent, or trade Google user data, and does not transfer it to advertisers, data brokers, information resellers, or credit bureaus. Google user data is never used to train artificial intelligence or machine learning models.</p>
+          </details>
+          <details>
+            <summary>Does SheetWatch store the contents of my spreadsheets?</summary>
+            <p>Only the cell range you explicitly choose to watch. SheetWatch stores point-in-time snapshots of that range so it can compute a before-and-after difference when something changes. Cells outside your selected range are never fetched and never stored. Snapshots are pruned automatically: the 50 most recent per sheet are kept, and beyond a 7-day detail window only one snapshot per day is retained.</p>
+          </details>
+          <details>
+            <summary>Can SheetWatch edit or delete my spreadsheets?</summary>
+            <p>Only in two situations you trigger yourself. First, when you explicitly accept a cross-sheet suggestion in the Compare feature, SheetWatch writes that one value into the target cell. Second, when you choose to remove a spreadsheet from the Sheets page, SheetWatch moves that file to your Google Drive trash, where you can restore it. During routine monitoring SheetWatch only reads.</p>
+          </details>
+          <details>
+            <summary>Why does SheetWatch ask for full Drive access?</summary>
+            <p>The Drive scope lets SheetWatch list the spreadsheets you own or that are shared with you, so you can pick one from a browser instead of pasting a URL, and lets it move a spreadsheet to trash when you ask. SheetWatch only queries spreadsheet files and never reads, downloads, or stores any other file in your Drive.</p>
+          </details>
+          <details>
+            <summary>How do I delete my account and all my data?</summary>
+            <p>Open Settings → Account → Danger zone and choose Delete account, then type your account email to confirm. Deletion is immediate and permanent: SheetWatch revokes its Google grant and erases your account record, OAuth tokens, tracked sheets, snapshots, change history, widgets, webhooks, share links, and notification logs. Your spreadsheets are never touched and stay in your Google Drive. If you would rather we handled it, email premraichura7@gmail.com from the registered account.</p>
+          </details>
+          <details>
+            <summary>Does SheetWatch use tracking cookies or analytics?</summary>
+            <p>No. SheetWatch sets exactly one cookie, a signed session cookie named sw_session that is strictly necessary to keep you signed in. There are no analytics cookies, no advertising cookies, and no third-party tracking pixels.</p>
+          </details>
+          <details>
+            <summary>Where is my data stored?</summary>
+            <p>In a managed PostgreSQL database operated by Neon, with the application hosted on Vercel and realtime updates delivered through Cloudflare. Regions may be in the United States, the European Union, or elsewhere, so using SheetWatch involves international data transfers.</p>
+          </details>
+          <details>
+            <summary>Who can see my public share links?</summary>
+            <p>Anyone who has the URL. Share links are unguessable but not access-controlled, so treat them like public web pages. They expose only the KPI widget values you selected and the board title, never your email address or your other sheets. You can revoke a link at any time in Settings.</p>
+          </details>
+        </div>
+      </section>
+
+      <footer>
+        <div class="foot-links">
+          <a href="/">SheetWatch</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="mailto:premraichura7@gmail.com">Contact</a>
+        </div>
+        <p>© 2026 Prem Raichura. SheetWatch is not affiliated with, endorsed by, or sponsored by Google LLC. Google, Google Sheets, and Google Drive are trademarks of Google LLC.</p>
+      </footer>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,3 +1,5 @@
+<img src="client/public/icons/icon-128.png" alt="SheetWatch" width="72" height="72" />
+
 # SheetWatch
 
 Self-hosted portal that watches your Google Sheets 24/7. Paste a sheet link → it polls the sheet every few minutes, detects any cell change, and notifies you by **web push**, email, Slack/Discord/generic webhooks or **Telegram**.

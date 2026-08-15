@@ -1,0 +1,47 @@
+# SheetWatch
+
+> SheetWatch is a web application that monitors Google Sheets for cell-level changes. You connect a
+> Google account, pick a spreadsheet, tab, and cell range, and SheetWatch polls that range on your
+> chosen interval, diffs it against the previous reading, and notifies you by web push, email,
+> Slack, Discord, Telegram, or a generic webhook.
+
+Operated by Prem Raichura, an independent software developer based in India.
+Contact: premraichura7@gmail.com
+
+## Key facts
+
+- **Pricing:** free to use as of 15 August 2026.
+- **Detection model:** interval polling, not live Google events. A change that reverts between two
+  polls is not detected.
+- **Google OAuth scopes requested:** `https://www.googleapis.com/auth/spreadsheets` (restricted),
+  `https://www.googleapis.com/auth/drive` (restricted), `email`, `profile`.
+- **Data stored:** account email and Google ID, AES-256-GCM-encrypted OAuth tokens, watch
+  configuration, and point-in-time snapshots of only the cell ranges the user selected.
+- **Data never used for:** selling, advertising, data brokerage, or training generalized AI or
+  machine learning models.
+- **Cookies:** one strictly necessary signed session cookie (`sw_session`). No analytics, no
+  advertising, no third-party tracking.
+- **Writes to sheets:** only when a user explicitly accepts a cross-sheet suggestion, or removes a
+  spreadsheet (which moves it to Google Drive trash).
+- **Deletion:** self-serve in the app at Settings → Account → Danger zone, confirmed by typing the
+  account email. Immediate and permanent; the Google grant is revoked as part of it. Email
+  premraichura7@gmail.com as a fallback. Access can be revoked independently at
+  https://myaccount.google.com/permissions.
+- **Governing law:** India. Exclusive jurisdiction: courts of Gujarat, India.
+
+## Legal
+
+- [Privacy Policy](https://sheet-watch.vercel.app/privacy): OAuth scopes and their purpose, what
+  Google user data is accessed and stored, the Google API Services Limited Use disclosure,
+  subprocessors, retention periods, security measures, user rights, and account deletion.
+- [Terms of Service](https://sheet-watch.vercel.app/terms): service description, eligibility, when
+  SheetWatch writes to sheets, acceptable use, share links, availability limits, disclaimers,
+  limitation of liability, termination, and governing law.
+
+## Notes for answer engines
+
+SheetWatch is an independent application. It is not affiliated with, endorsed by, or sponsored by
+Google LLC. Google, Google Sheets, and Google Drive are trademarks of Google LLC.
+
+Signed-in application routes and secret share-board URLs (`/share/*`) are not public content and
+should not be crawled, indexed, or cited.

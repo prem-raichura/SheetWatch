@@ -20,6 +20,8 @@
       "source": "/healthz",
       "destination": "https://sheet-watch-api.vercel.app/healthz"
     },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

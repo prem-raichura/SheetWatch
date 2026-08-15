@@ -1,4 +1,5 @@
 <title>SheetWatch — Deployment Runbook</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%20%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%229%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%232a2e3a%22%20%2F%3E%20%3Crect%20x%3D%2213%22%20y%3D%222%22%20width%3D%229%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%230fa3a3%22%20%2F%3E%20%3Crect%20x%3D%222%22%20y%3D%2213%22%20width%3D%229%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%232a2e3a%22%20%2F%3E%20%3Crect%20x%3D%2213%22%20y%3D%2213%22%20width%3D%229%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%232a2e3a%22%20fill-opacity%3D%220.35%22%20%2F%3E%20%3C%2Fsvg%3E" />
 
 <style>
   :root {
@@ -518,7 +519,15 @@
 <header class="masthead">
   <div class="masthead-inner">
     <div>
-      <span class="eyebrow">SheetWatch · Deployment Runbook</span>
+      <span class="eyebrow" style="display:inline-flex;align-items:center;gap:.5em">
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" aria-hidden="true">
+          <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" />
+          <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" />
+          <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" />
+          <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.35" />
+        </svg>
+        SheetWatch · Deployment Runbook
+      </span>
       <h1>Ship it: Vercel, Neon, and one small VM</h1>
     </div>
     <p class="lede">
@@ -1021,32 +1030,146 @@ docker compose logs -f worker</pre></div>
       Nothing else depends on it.
     </p>
 
+    <div class="note stop">
+      <span class="note-label">Deploy from your laptop, not the VM</span>
+      <p>
+        <code>wrangler login</code> opens a browser and waits for the OAuth
+        callback on <code>localhost:8976</code> <em>of the machine running
+        it</em>. Over SSH there's no browser on the VM, and
+        <code>localhost:8976</code> in your laptop's browser is your laptop — so
+        the token never arrives and the command just hangs.
+      </p>
+      <p>
+        Forwarding the port (<code>ssh -L 8976:localhost:8976 …</code>) gets the
+        code through, but then fails again: Cloudflare bot-challenges datacenter
+        IPs, and the token exchange comes back as an HTML challenge page —
+        <code>Invalid JSON in response: status: 403 Forbidden</code>. Retrying
+        won't clear it.
+      </p>
+      <p>
+        <strong>The VM never needs Wrangler.</strong> It reads two environment
+        variables and nothing else. Deploy from your laptop.
+      </p>
+    </div>
+
+    <h3>On your laptop</h3>
+
     <ol class="steps">
       <li>
         <input type="checkbox" id="c-6-1">
         <div class="step-body">
-          <div class="code"><pre>cd realtime
-npm install
-npx wrangler deploy
-npx wrangler secret put REALTIME_SECRET   <span class="c"># from phase 00</span></pre></div>
+          <p>
+            <strong>Create the workers.dev subdomain first.</strong> A brand-new
+            account has none, and the deploy fails with
+            <code>[code: 10063]</code> rather than prompting. There is no CLI for
+            it — opening Workers &amp; Pages in the dashboard once provisions it
+            automatically.
+          </p>
+          <div class="code"><pre>https://dash.cloudflare.com/&lt;your-account-id&gt;/workers-and-pages</pre></div>
+          <p>
+            Your account ID is printed by <code>npx wrangler whoami</code>, and
+            appears in the <code>[code: 10063]</code> error itself.
+          </p>
         </div>
       </li>
       <li>
         <input type="checkbox" id="c-6-2">
         <div class="step-body">
           <p>
-            Set <code>REALTIME_URL</code> (the deployed
-            <code>https://…workers.dev</code> origin) and
-            <code>REALTIME_SECRET</code> on <strong>both</strong> the Vercel API
-            and the VM worker. Redeploy both.
+            <strong>Generate the shared secret</strong> — one value, pasted in
+            three places. Keep it somewhere you can re-paste twice.
           </p>
+          <div class="code"><pre>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</pre></div>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" id="c-6-3">
+        <div class="step-body">
+          <p>Log in, deploy, set the secret:</p>
+          <div class="code"><pre>cd realtime
+npm install
+npx wrangler login
+npx wrangler deploy
+npx wrangler secret put REALTIME_SECRET   <span class="c"># paste the value from above</span></pre></div>
           <p>
-            The API mints the browser's token; the worker publishes the events.
-            Miss either side and it silently stays on polling.
+            If login reports <code>the port is already in use</code>, something
+            else holds 8976 — most often a leftover SSH tunnel from an earlier
+            attempt. Close it, or pass
+            <code>--callback-port 8977</code>.
+          </p>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" id="c-6-4">
+        <div class="step-body">
+          <p>Note the deployed origin and confirm it answers:</p>
+          <div class="code"><pre>curl https://sheetwatch-realtime.&lt;subdomain&gt;.workers.dev/health
+<span class="c"># {"ok":true}</span></pre></div>
+        </div>
+      </li>
+    </ol>
+
+    <h3>Then wire it into both services</h3>
+
+    <ol class="steps">
+      <li>
+        <input type="checkbox" id="c-6-5">
+        <div class="step-body">
+          <p><strong>Vercel API project</strong> — add both, then redeploy:</p>
+          <div class="code"><pre>REALTIME_URL=https://sheetwatch-realtime.&lt;subdomain&gt;.workers.dev
+REALTIME_SECRET=&lt;same value&gt;</pre></div>
+          <p>
+            <code>https://</code>, not <code>wss://</code>, and no trailing
+            slash. The server posts to <code>${REALTIME_URL}/notify</code>; the
+            browser rewrites the scheme itself.
+          </p>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" id="c-6-6">
+        <div class="step-body">
+          <p><strong>VM</strong> — same two lines in <code>server/.env.production</code>:</p>
+          <div class="code"><pre>ssh root@your-vm
+cd ~/SheetWatch/server &amp;&amp; nano .env.production
+docker compose up -d --build</pre></div>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" id="c-6-7">
+        <div class="step-body">
+          <p><strong>Confirm it's actually live.</strong> Open the app and sign in.</p>
+          <p><span class="expect">header badge reads "live", not "polling"</span></p>
+          <p>
+            Edit a watched cell — a toast should appear without a refresh. If it
+            doesn't, stream the worker's logs from your laptop and edit again:
+          </p>
+          <div class="code"><pre>npx wrangler tail</pre></div>
+          <p>
+            Traffic on <code>/notify</code> but none on <code>/ws</code> means
+            the browser never connected — check the API's
+            <code>REALTIME_URL</code>. The reverse means the VM isn't
+            publishing — check its two variables and that the container
+            restarted.
           </p>
         </div>
       </li>
     </ol>
+
+    <div class="note warn">
+      <span class="note-label">Three copies of one secret</span>
+      <p>
+        The same string must be byte-identical on the Cloudflare worker, the
+        Vercel API and the VM. And <strong>both</strong> the API and the VM need
+        it: the API mints the browser's token, the VM publishes the events. API
+        only means the browser connects and nothing ever arrives; VM only means
+        events publish to nobody.
+      </p>
+      <p>
+        Every one of these failures is silent — the app just stays on 30s
+        polling with no error anywhere. <code>npx wrangler tail</code> streams
+        the worker's live logs if you need to see what's reaching it.
+      </p>
+    </div>
 
     <div class="note">
       <span class="note-label">No client variable needed</span>

@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Terms of Service — SheetWatch</title>
+<meta name="description" content="SheetWatch terms of service: eligibility, your Google account and spreadsheet responsibilities, when SheetWatch may write to your sheets, acceptable use, share links, availability, disclaimers, limitation of liability, termination, and governing law." />
+<link rel="canonical" href="https://sheet-watch.vercel.app/terms" />
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+<meta name="author" content="Prem Raichura" />
+<meta name="last-modified" content="2026-08-15" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="SheetWatch" />
+<meta property="og:title" content="Terms of Service — SheetWatch" />
+<meta property="og:description" content="The agreement between you and SheetWatch: what the Service does, what you are responsible for, and the limits of our liability." />
+<meta property="og:url" content="https://sheet-watch.vercel.app/terms" />
+<meta property="og:image" content="https://sheet-watch.vercel.app/icons/icon-512.png" />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Terms of Service — SheetWatch" />
+<meta name="twitter:description" content="The agreement between you and SheetWatch." />
+<meta name="twitter:image" content="https://sheet-watch.vercel.app/icons/icon-512.png" />
+
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+<meta name="theme-color" content="#0FA3A3" />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://sheet-watch.vercel.app/#website",
+      "url": "https://sheet-watch.vercel.app/",
+      "name": "SheetWatch",
+      "description": "SheetWatch monitors Google Sheets for cell-level changes and sends notifications by web push, email, Slack, Discord, Telegram, or webhook.",
+      "publisher": { "@id": "https://sheet-watch.vercel.app/#publisher" },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://sheet-watch.vercel.app/#publisher",
+      "name": "Prem Raichura",
+      "email": "premraichura7@gmail.com",
+      "jobTitle": "Independent software developer",
+      "address": { "@type": "PostalAddress", "addressCountry": "IN" }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://sheet-watch.vercel.app/terms#webpage",
+      "url": "https://sheet-watch.vercel.app/terms",
+      "name": "Terms of Service — SheetWatch",
+      "description": "The binding agreement governing use of SheetWatch, including acceptable use, disclaimers, limitation of liability, termination, and governing law.",
+      "isPartOf": { "@id": "https://sheet-watch.vercel.app/#website" },
+      "about": { "@id": "https://sheet-watch.vercel.app/#publisher" },
+      "datePublished": "2026-08-15",
+      "dateModified": "2026-08-15",
+      "inLanguage": "en",
+      "breadcrumb": { "@id": "https://sheet-watch.vercel.app/terms#breadcrumb" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://sheet-watch.vercel.app/terms#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "SheetWatch", "item": "https://sheet-watch.vercel.app/" },
+        { "@type": "ListItem", "position": 2, "name": "Terms of Service", "item": "https://sheet-watch.vercel.app/terms" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://sheet-watch.vercel.app/terms#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How much does SheetWatch cost?",
+          "acceptedAnswer": { "@type": "Answer", "text": "SheetWatch is currently free to use. If paid plans are introduced later, existing features you rely on will not become paid without at least 30 days notice in the app." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SheetWatch guarantee it will detect every change?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. SheetWatch polls your sheets on an interval rather than receiving instant events from Google, so a value that changes and changes back between two polls will not be detected. SheetWatch is provided without any uptime or delivery guarantee and must not be relied on as the sole safeguard for critical processes." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can SheetWatch write to my Google Sheets?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Only when you explicitly accept a cross-sheet suggestion, which writes that single value into the target cell, or when you choose to remove a spreadsheet, which moves the file to your Google Drive trash. You are responsible for reviewing a suggestion before accepting it, and writes cannot be undone by SheetWatch." }
+        },
+        {
+          "@type": "Question",
+          "name": "Who owns the data in my spreadsheets?",
+          "acceptedAnswer": { "@type": "Answer", "text": "You do. SheetWatch claims no ownership of your spreadsheet content. You grant only the limited licence needed to read, store, and display that data in order to provide the monitoring features you configured." }
+        },
+        {
+          "@type": "Question",
+          "name": "What law governs these terms?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The laws of India, without regard to conflict-of-law rules. Disputes are subject to the exclusive jurisdiction of the courts of Gujarat, India, except that either party may seek injunctive relief in any competent court." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef1f4;
+    --ink: #171b23;
+    --ink-2: #454c5a;
+    --ink-3: #737c8c;
+    --line: #dfe3ea;
+    --line-2: #c8cede;
+    --accent: #0b8c8c;
+    --accent-deep: #076a6a;
+    --accent-soft: #e2f2f1;
+    --warn: #8a5a1c;
+    --warn-soft: #fbf1e2;
+    --warn-line: #e6c9a2;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --maxw: 1180px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216;
+      --surface: #161a21;
+      --surface-2: #1d222b;
+      --ink: #e9edf3;
+      --ink-2: #b3bcca;
+      --ink-3: #838d9d;
+      --line: #262c37;
+      --line-2: #333b49;
+      --accent: #2fc0bc;
+      --accent-deep: #5fd6d2;
+      --accent-soft: #122a2c;
+      --warn: #d9a763;
+      --warn-soft: #2a2214;
+      --warn-line: #4a3a1e;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent-deep); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: .85rem 1.5rem;
+    display: flex; align-items: center; gap: .9rem; flex-wrap: wrap;
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-weight: 700; color: var(--ink); text-decoration: none; font-size: .95rem;
+  }
+  .brand svg { display: block; }
+  .topnav { margin-left: auto; display: flex; gap: 1.1rem; font-size: .85rem; }
+  .topnav a { color: var(--ink-3); text-decoration: none; font-weight: 500; }
+  .topnav a:hover, .topnav a[aria-current="page"] { color: var(--accent); }
+
+  .shell { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem 5rem; }
+  .masthead { padding: 3rem 0 1.75rem; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.15; margin: .45rem 0 .8rem;
+    color: var(--ink); letter-spacing: -.02em; font-weight: 700;
+  }
+  .lede { font-size: 1.05rem; max-width: 62ch; margin: 0 0 1.2rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: .5rem; font-family: var(--mono); font-size: .74rem; }
+  .meta span {
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink-3);
+    padding: .3rem .6rem; border-radius: 999px;
+  }
+
+  .cols { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 3rem; padding-top: 2.5rem; }
+  /* minmax(0,…) not 1fr: a bare 1fr resolves to minmax(auto,1fr), which lets the
+     min-width tables blow the column past the viewport and scroll the whole page. */
+  @media (max-width: 940px) { .cols { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
+
+  .toc { position: sticky; top: 5rem; align-self: start; max-height: calc(100vh - 7rem); overflow-y: auto; }
+  @media (max-width: 940px) {
+    .toc {
+      position: static; max-height: none; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.25rem;
+    }
+  }
+  .toc h2 {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 .7rem; font-weight: 600;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; margin: 0; }
+  .toc a {
+    display: block; padding: .3rem 0 .3rem 1.9rem; position: relative;
+    font-size: .845rem; line-height: 1.4; color: var(--ink-2); text-decoration: none;
+    border-left: 2px solid transparent; margin-left: -2px;
+  }
+  .toc a::before {
+    content: counter(toc); position: absolute; left: .45rem; top: .3rem;
+    font-family: var(--mono); font-size: .7rem; color: var(--ink-3);
+  }
+  .toc a:hover { color: var(--accent); border-left-color: var(--line-2); }
+
+  article { min-width: 0; }
+  section { scroll-margin-top: 5rem; padding-top: .5rem; }
+  section + section { margin-top: 2.75rem; }
+  h2 {
+    font-size: 1.35rem; color: var(--ink); letter-spacing: -.01em; font-weight: 700;
+    margin: 0 0 .35rem; line-height: 1.3;
+  }
+  h2 .num {
+    font-family: var(--mono); font-size: .8rem; color: var(--accent);
+    margin-right: .55rem; font-weight: 600;
+  }
+  h3 { font-size: 1rem; color: var(--ink); margin: 1.75rem 0 .4rem; font-weight: 650; }
+  p { margin: .75rem 0; }
+  ul, ol { margin: .75rem 0; padding-left: 1.3rem; }
+  li { margin: .4rem 0; }
+  strong { color: var(--ink); font-weight: 650; }
+  code {
+    font-family: var(--mono); font-size: .86em; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 5px; padding: .1em .38em;
+    color: var(--ink); word-break: break-word;
+  }
+  .upper { text-transform: uppercase; font-size: .93em; letter-spacing: .01em; }
+
+  .tldr {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; padding: 1.4rem 1.6rem; margin: 0 0 .5rem;
+  }
+  .tldr h2 { font-size: 1rem; margin-bottom: .6rem; }
+  .tldr ul { margin: 0; padding-left: 1.15rem; }
+  .tldr li { margin: .45rem 0; font-size: .95rem; }
+
+  .callout {
+    border: 1px solid var(--line-2); border-left: 3px solid var(--accent);
+    background: var(--accent-soft); border-radius: 0 12px 12px 0;
+    padding: 1rem 1.25rem; margin: 1.25rem 0;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); }
+
+  .table-wrap { overflow-x: auto; margin: 1.1rem 0; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .89rem; background: var(--surface); }
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    background: var(--surface-2); color: var(--ink); font-weight: 650;
+    font-size: .76rem; letter-spacing: .05em; text-transform: uppercase;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .82em; }
+
+  .faq { border-top: 1px solid var(--line); }
+  .faq details { border-bottom: 1px solid var(--line); padding: .25rem 0; }
+  .faq summary {
+    cursor: pointer; padding: .9rem 0; font-weight: 600; color: var(--ink);
+    list-style: none; display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; font-family: var(--mono); color: var(--accent); font-size: 1.1rem; }
+  .faq details[open] summary::after { content: "\2013"; }
+  .faq details > p { margin-top: 0; padding-bottom: .5rem; }
+
+  footer {
+    border-top: 1px solid var(--line); margin-top: 4rem; padding: 2rem 0 0;
+    font-size: .85rem; color: var(--ink-3);
+  }
+  footer a { color: var(--ink-3); }
+  footer a:hover { color: var(--accent); }
+  .foot-links { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: .8rem; }
+
+  @media print {
+    .topbar, .toc, .faq summary::after { display: none; }
+    .cols { grid-template-columns: 1fr; }
+    body { background: #fff; font-size: 11pt; }
+    .faq details { display: block; }
+    a { text-decoration: none; color: inherit; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+        <rect x="2" y="2" width="9" height="9" rx="2" fill="currentColor" />
+        <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" />
+        <rect x="2" y="13" width="9" height="9" rx="2" fill="currentColor" />
+        <rect x="13" y="13" width="9" height="9" rx="2" fill="currentColor" fill-opacity="0.35" />
+      </svg>
+      SheetWatch
+    </a>
+    <nav class="topnav">
+      <a href="/">App</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms" aria-current="page">Terms</a>
+    </nav>
+  </div>
+</div>
+
+<div class="shell">
+
+  <header class="masthead">
+    <span class="eyebrow">SheetWatch · Legal</span>
+    <h1>Terms of Service</h1>
+    <p class="lede">
+      These terms form a binding agreement between you and the operator of SheetWatch.
+      They explain what the Service does, what you are responsible for, and the limits
+      of our obligations and liability.
+    </p>
+    <div class="meta">
+      <span>Effective 15 August 2026</span>
+      <span>Last updated 15 August 2026</span>
+      <span>Version 1.0</span>
+    </div>
+  </header>
+
+  <div class="cols">
+
+    <aside class="toc">
+      <h2>Contents</h2>
+      <ol>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#acceptance">Acceptance</a></li>
+        <li><a href="#service">What SheetWatch does</a></li>
+        <li><a href="#eligibility">Eligibility</a></li>
+        <li><a href="#accounts">Your account</a></li>
+        <li><a href="#google">Google account and data</a></li>
+        <li><a href="#writes">When we write to your sheets</a></li>
+        <li><a href="#your-content">Your content</a></li>
+        <li><a href="#acceptable-use">Acceptable use</a></li>
+        <li><a href="#notifications">Notifications</a></li>
+        <li><a href="#share-links">Share links</a></li>
+        <li><a href="#third-party">Third-party services</a></li>
+        <li><a href="#availability">Availability and limits</a></li>
+        <li><a href="#fees">Fees</a></li>
+        <li><a href="#ip">Intellectual property</a></li>
+        <li><a href="#feedback">Feedback</a></li>
+        <li><a href="#disclaimer">Disclaimers</a></li>
+        <li><a href="#liability">Limitation of liability</a></li>
+        <li><a href="#indemnity">Indemnity</a></li>
+        <li><a href="#termination">Termination</a></li>
+        <li><a href="#changes">Changes to these terms</a></li>
+        <li><a href="#law">Governing law</a></li>
+        <li><a href="#general">General</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ol>
+    </aside>
+
+    <article>
+
+      <section id="summary">
+        <div class="tldr">
+          <h2>Summary</h2>
+          <ul>
+            <li><strong>SheetWatch watches the Google Sheets ranges you pick</strong> and tells you when cells change.</li>
+            <li><strong>Your data stays yours.</strong> We claim no ownership of your spreadsheet content.</li>
+            <li><strong>It is free today</strong>, and provided as-is with no uptime or delivery guarantee.</li>
+            <li><strong>Polling is not instant.</strong> A change that reverts between two polls will be missed — do not use SheetWatch as your only safeguard for anything critical.</li>
+            <li><strong>We write to a sheet only when you tell us to</strong>, by accepting a suggestion or removing a spreadsheet.</li>
+            <li><strong>You can leave at any time</strong> by revoking Google access and requesting deletion.</li>
+          </ul>
+        </div>
+        <p style="font-size:.88rem;color:var(--ink-3)">
+          This summary is for convenience only and is not part of the agreement. The numbered
+          sections below govern.
+        </p>
+      </section>
+
+      <section id="acceptance">
+        <h2><span class="num">01</span>Acceptance of these terms</h2>
+        <p>
+          These Terms of Service ("Terms") are a legal agreement between you ("you", "your") and
+          <strong>Prem Raichura</strong>, an independent software developer based in India, operating
+          the SheetWatch service ("SheetWatch", "the Service", "we", "us", "our").
+        </p>
+        <p>
+          By signing in to SheetWatch, connecting a Google account, or otherwise using the Service —
+          including opening a public share link — you agree to these Terms and to our
+          <a href="/privacy">Privacy Policy</a>, which is incorporated here by reference. If you do
+          not agree, do not use the Service.
+        </p>
+        <p>
+          If you use SheetWatch on behalf of an organisation, you represent that you have authority
+          to bind that organisation, and "you" includes it.
+        </p>
+      </section>
+
+      <section id="service">
+        <h2><span class="num">02</span>What SheetWatch does</h2>
+        <p>
+          SheetWatch is a web application that monitors Google Sheets for changes. After you connect
+          your Google account and select a spreadsheet, a tab, and a cell range, SheetWatch fetches
+          that range on a schedule you choose, compares it to the previous reading, and records any
+          differences. It can then notify you through web push, email, Slack, Discord, a generic
+          webhook, or Telegram, according to rules you configure.
+        </p>
+        <p>The Service also provides supporting features:</p>
+        <ul>
+          <li>Change history and per-sheet timelines</li>
+          <li>KPI tiles and charts built from cells inside a watched range</li>
+          <li>Alert rules that fire when values match conditions you define</li>
+          <li>Quiet hours, snoozing, pausing, and archiving</li>
+          <li>Scheduled PDF and CSV reports delivered by email</li>
+          <li>Cross-sheet comparison, which surfaces differences between a master sheet and target sheets and lets you apply them</li>
+          <li>Read-only public share boards at a secret URL</li>
+        </ul>
+        <p>
+          We may add, change, or remove features at any time. We will not remove a feature you
+          actively depend on without reasonable notice in the app where practical.
+        </p>
+      </section>
+
+      <section id="eligibility">
+        <h2><span class="num">03</span>Eligibility</h2>
+        <p>To use SheetWatch you must:</p>
+        <ul>
+          <li>Be at least 16 years old, or 18 in India unless a parent or guardian has given verifiable consent;</li>
+          <li>Have a valid Google account and the right to access the spreadsheets you choose to watch;</li>
+          <li>Not be barred from using the Service under the laws of your jurisdiction or ours;</li>
+          <li>Not have been previously suspended from the Service.</li>
+        </ul>
+      </section>
+
+      <section id="accounts">
+        <h2><span class="num">04</span>Your account</h2>
+        <p>
+          Accounts are created by signing in with Google. There is no separate SheetWatch password.
+          You are responsible for maintaining the security of the Google account you use, for
+          everything that happens under your SheetWatch account, and for keeping your notification
+          destinations accurate.
+        </p>
+        <p>
+          Your SheetWatch account is personal to you. Do not share your session, and tell us promptly
+          at <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a> if you believe it
+          has been accessed without your authorisation.
+        </p>
+      </section>
+
+      <section id="google">
+        <h2><span class="num">05</span>Your Google account and spreadsheet data</h2>
+        <p>
+          SheetWatch accesses Google Sheets and Google Drive on your behalf using OAuth 2.0
+          permissions that you grant. The scopes we request and exactly what we do with the resulting
+          data are set out in the <a href="/privacy#google-data">Privacy Policy</a>.
+        </p>
+        <p>You represent and warrant that:</p>
+        <ul>
+          <li>You have the right to access every spreadsheet you add to SheetWatch, and the right to have its contents read and stored by the Service;</li>
+          <li>Where a spreadsheet contains other people's personal data, you have a lawful basis to process it and to allow SheetWatch to process it on your behalf;</li>
+          <li>You will not use SheetWatch to monitor a spreadsheet you are not authorised to access.</li>
+        </ul>
+        <p>
+          Your use of Google Sheets and Google Drive is separately governed by
+          <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">Google's Terms of Service</a>.
+          SheetWatch is an independent application and is not affiliated with, endorsed by, or
+          sponsored by Google LLC. You may revoke our access at any time at
+          <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer" target="_blank">myaccount.google.com/permissions</a>;
+          doing so will stop the Service from working.
+        </p>
+      </section>
+
+      <section id="writes">
+        <h2><span class="num">06</span>When SheetWatch writes to your sheets</h2>
+        <div class="callout warn">
+          <p>
+            <strong>Read the suggestion before you accept it.</strong> Writes are applied directly to
+            live spreadsheets and SheetWatch cannot undo them. Use Google Sheets' own version history
+            to recover from an unwanted change.
+          </p>
+        </div>
+        <p>During routine monitoring, SheetWatch only reads. It writes in exactly two cases, both initiated by you:</p>
+        <ol>
+          <li>
+            <strong>Accepting a comparison suggestion.</strong> When you accept a suggestion in the
+            Compare feature, SheetWatch writes that single value into the identified cell of the
+            target spreadsheet. If the target cell changed after the suggestion was raised, the
+            suggestion is flagged as conflicted, and it is your responsibility to review it.
+          </li>
+          <li>
+            <strong>Removing a spreadsheet.</strong> When you choose to remove a spreadsheet from the
+            Sheets page, SheetWatch moves that file to your Google Drive trash, where Google's own
+            retention rules apply and from which you can restore it.
+          </li>
+        </ol>
+        <p>
+          You are solely responsible for reviewing any change before accepting it and for the
+          consequences of changes applied to your spreadsheets through the Service.
+        </p>
+      </section>
+
+      <section id="your-content">
+        <h2><span class="num">07</span>Your content</h2>
+        <p>
+          You retain all ownership of your spreadsheets, their contents, and everything you configure
+          in SheetWatch. We claim no ownership over any of it.
+        </p>
+        <p>
+          You grant us a limited, non-exclusive, worldwide, royalty-free licence to access, copy,
+          store, process, transmit, and display your content solely to the extent necessary to
+          operate the features you have enabled — for example, storing a snapshot of a watched range
+          so a difference can be computed, or including a value in a notification you asked for. This
+          licence exists only for as long as you keep the content in the Service, and ends when the
+          content is deleted, subject to routine backup rotation described in the Privacy Policy.
+        </p>
+      </section>
+
+      <section id="acceptable-use">
+        <h2><span class="num">08</span>Acceptable use</h2>
+        <p>You agree not to:</p>
+        <ul>
+          <li>Use the Service to access or monitor data you are not authorised to access;</li>
+          <li>Break, probe, or circumvent authentication, rate limits, quotas, or any other technical restriction;</li>
+          <li>Configure polling or automation designed to place an unreasonable load on the Service or on Google's APIs, or to evade their quotas;</li>
+          <li>Use the Service to send unsolicited bulk messages, or to route notifications to endpoints whose owners have not consented;</li>
+          <li>Point a webhook at an internal, private, or loopback network address, or otherwise attempt to use the Service as a proxy to reach systems you do not control;</li>
+          <li>Upload, store, or transmit content that is unlawful, infringing, defamatory, or that you have no right to process;</li>
+          <li>Reverse engineer, decompile, scrape, or create derivative services from the Service, except to the extent applicable law expressly permits;</li>
+          <li>Resell, sublicense, or offer the Service to third parties as your own;</li>
+          <li>Use the Service to build a competing product, or to benchmark it for public comparison, without our prior written consent;</li>
+          <li>Interfere with any other user's use of the Service.</li>
+        </ul>
+        <p>
+          We may investigate suspected violations and may suspend or terminate access without prior
+          notice where we reasonably believe a violation is ongoing or harmful.
+        </p>
+      </section>
+
+      <section id="notifications">
+        <h2><span class="num">09</span>Notifications</h2>
+        <p>
+          Notifications are delivered through channels you configure and depend on third parties —
+          your browser vendor's push service, your email provider, Slack, Discord, Telegram, or your
+          own endpoint. We cannot guarantee that any notification will be delivered, delivered on
+          time, or delivered only once.
+        </p>
+        <ul>
+          <li>Web push requires your browser's permission and, on iOS, that the app is installed to the home screen and opened from there.</li>
+          <li>Notification content may include cell values from your watched range. Choose destinations accordingly — anyone with access to a Slack or Discord channel you route to can read those values.</li>
+          <li>Quiet hours hold push and email notifications and release them when the window ends. Webhooks are always delivered immediately.</li>
+          <li>Failed deliveries are retried a limited number of times and then recorded as failed in the delivery log.</li>
+        </ul>
+      </section>
+
+      <section id="share-links">
+        <h2><span class="num">10</span>Public share links</h2>
+        <p>
+          Share links publish a read-only board of selected KPI widgets at a secret URL that requires
+          no sign-in. <strong>Anyone who has the URL can view the board.</strong> The URL is
+          unguessable but not access-controlled, and it may be forwarded, indexed if you post it
+          publicly, or retained in browser history.
+        </p>
+        <p>
+          You are solely responsible for deciding what to publish through a share link and for whom
+          you give it to. You can revoke a link at any time in Settings, which stops it resolving
+          immediately. We are not liable for any disclosure resulting from a share link you created.
+        </p>
+      </section>
+
+      <section id="third-party">
+        <h2><span class="num">11</span>Third-party services</h2>
+        <p>
+          The Service depends on and integrates with third parties, including Google, our hosting and
+          database providers, and any notification destination you configure. Those services are
+          governed by their own terms and privacy policies. We are not responsible for their
+          availability, their acts or omissions, or any change they make that affects the Service —
+          including changes to Google's API terms, quotas, or scope policies that could reduce or
+          suspend SheetWatch's functionality.
+        </p>
+      </section>
+
+      <section id="availability">
+        <h2><span class="num">12</span>Availability, accuracy, and limits</h2>
+        <div class="callout warn">
+          <p>
+            <strong>SheetWatch polls; it does not receive live events from Google.</strong> If a value
+            changes and changes back between two polls, that change will not be detected. Detection
+            is therefore best-effort and inherently delayed by up to your chosen poll interval.
+          </p>
+        </div>
+        <ul>
+          <li>The Service is provided without any uptime commitment, service level agreement, or support commitment.</li>
+          <li>We may impose or change limits on poll frequency, number of watched sheets, snapshot retention, or notification volume, including to stay within Google API quotas.</li>
+          <li>We may perform maintenance, and may suspend the Service, with or without notice.</li>
+          <li>Change detection depends on Google's APIs returning accurate and timely data; we do not control and cannot guarantee that.</li>
+        </ul>
+        <p class="upper">
+          <strong>
+            You must not rely on SheetWatch as the sole or last line of defence for any financial,
+            medical, legal, safety-critical, or otherwise consequential process. Maintain independent
+            verification for anything that matters.
+          </strong>
+        </p>
+      </section>
+
+      <section id="fees">
+        <h2><span class="num">13</span>Fees</h2>
+        <p>
+          SheetWatch is currently provided free of charge. We may introduce paid plans in future. If
+          we do, we will give at least 30 days' notice in the app before any feature you actively use
+          becomes paid, and you will be able to export your data and stop using the Service before
+          any charge applies. You are responsible for any costs you incur elsewhere, such as your own
+          hosting, email, or third-party integrations.
+        </p>
+      </section>
+
+      <section id="ip">
+        <h2><span class="num">14</span>Intellectual property</h2>
+        <p>
+          The Service — including its source code, design, interface, name, and logo — is owned by us
+          and protected by intellectual property law. Subject to these Terms, we grant you a limited,
+          revocable, non-exclusive, non-transferable licence to use the Service for its intended
+          purpose. No other rights are granted, whether by implication, estoppel, or otherwise.
+        </p>
+        <p>
+          Google, Google Sheets, Google Drive, Slack, Discord, and Telegram are trademarks of their
+          respective owners and are referred to here for identification only.
+        </p>
+      </section>
+
+      <section id="feedback">
+        <h2><span class="num">15</span>Feedback</h2>
+        <p>
+          If you send us ideas, bug reports, or suggestions, you grant us an unrestricted, perpetual,
+          irrevocable, royalty-free right to use them for any purpose, without any obligation to
+          compensate or credit you. Please do not send us anything you consider confidential.
+        </p>
+      </section>
+
+      <section id="disclaimer">
+        <h2><span class="num">16</span>Disclaimers</h2>
+        <p class="upper">
+          <strong>
+            The Service is provided "as is" and "as available", without warranty of any kind, whether
+            express, implied, or statutory. To the maximum extent permitted by law, we disclaim all
+            warranties, including merchantability, fitness for a particular purpose, title, accuracy,
+            and non-infringement.
+          </strong>
+        </p>
+        <p class="upper">
+          <strong>
+            We do not warrant that the Service will be uninterrupted, timely, secure, or error-free;
+            that every change to your spreadsheets will be detected; that every notification will be
+            delivered; or that any defect will be corrected. You use the Service at your own risk.
+          </strong>
+        </p>
+        <p>
+          Some jurisdictions do not allow the exclusion of certain warranties, so parts of this
+          section may not apply to you. Nothing in these Terms limits rights that cannot be limited
+          under the law that applies to you as a consumer.
+        </p>
+      </section>
+
+      <section id="liability">
+        <h2><span class="num">17</span>Limitation of liability</h2>
+        <p class="upper">
+          <strong>
+            To the maximum extent permitted by law, we will not be liable for any indirect,
+            incidental, special, consequential, exemplary, or punitive damages, or for any loss of
+            profits, revenue, goodwill, business, or anticipated savings, however caused and under any
+            theory of liability, even if we have been advised of the possibility of such damages.
+          </strong>
+        </p>
+        <p class="upper">
+          <strong>
+            In particular, and without limiting the above, we will not be liable for any loss arising
+            from a change we failed to detect, a notification that was not delivered or was delayed, a
+            value written to a spreadsheet through a suggestion you accepted, a spreadsheet moved to
+            trash at your request, data exposed through a share link you created, corruption or loss
+            of data, or any act or omission of a third-party service.
+          </strong>
+        </p>
+        <p class="upper">
+          <strong>
+            Our total aggregate liability arising out of or relating to the Service or these Terms
+            will not exceed the greater of the total amount you paid us in the twelve months before
+            the event giving rise to the claim, or one hundred Indian rupees (₹100). Because the
+            Service is currently free, this cap will generally be ₹100.
+          </strong>
+        </p>
+        <p>
+          Nothing in these Terms excludes or limits liability for fraud, fraudulent
+          misrepresentation, gross negligence, wilful misconduct, death or personal injury caused by
+          negligence, or any other liability that cannot lawfully be excluded.
+        </p>
+      </section>
+
+      <section id="indemnity">
+        <h2><span class="num">18</span>Indemnity</h2>
+        <p>
+          You agree to indemnify and hold us harmless from any claim, demand, loss, liability, or
+          expense, including reasonable legal fees, arising out of your use of the Service, your
+          content, your breach of these Terms, your violation of any law, or your infringement of a
+          third party's rights — including any claim that you were not authorised to access or
+          process a spreadsheet you monitored through the Service.
+        </p>
+      </section>
+
+      <section id="termination">
+        <h2><span class="num">19</span>Termination</h2>
+        <p>
+          <strong>By you.</strong> Stop using the Service at any time. To close your account
+          entirely, go to <strong>Settings → Account → Danger zone</strong> and choose
+          <strong>Delete account</strong>; this revokes our Google access and permanently erases your
+          data at once, as described in the <a href="/privacy#deletion">Privacy Policy</a>. You can
+          also revoke access on its own at
+          <a href="https://myaccount.google.com/permissions" rel="noopener noreferrer" target="_blank">myaccount.google.com/permissions</a>,
+          or email <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a> and we will
+          delete the account for you.
+        </p>
+        <p>
+          <strong>By us.</strong> We may suspend or terminate your access, with or without notice, if
+          you breach these Terms, if your use threatens the security, integrity, or availability of
+          the Service, if required by law or by Google, or if we discontinue the Service. Where we
+          discontinue the Service entirely, we will give reasonable notice in the app so you can
+          export your data.
+        </p>
+        <p>
+          On termination, your right to use the Service ends immediately. Sections that by their
+          nature should survive — including <a href="#your-content">Your content</a>,
+          <a href="#ip">Intellectual property</a>, <a href="#feedback">Feedback</a>,
+          <a href="#disclaimer">Disclaimers</a>, <a href="#liability">Limitation of liability</a>,
+          <a href="#indemnity">Indemnity</a>, <a href="#law">Governing law</a>, and
+          <a href="#general">General</a> — survive.
+        </p>
+      </section>
+
+      <section id="changes">
+        <h2><span class="num">20</span>Changes to these terms</h2>
+        <p>
+          We may update these Terms from time to time. The <strong>Last updated</strong> date at the
+          top reflects the current version. For material changes we will give notice in the app
+          before they take effect. Continuing to use the Service after a change takes effect means
+          you accept the revised Terms; if you do not accept them, stop using the Service and request
+          deletion of your account.
+        </p>
+      </section>
+
+      <section id="law">
+        <h2><span class="num">21</span>Governing law and disputes</h2>
+        <p>
+          These Terms are governed by the laws of India, without regard to conflict-of-law rules. The
+          courts located in Gujarat, India have exclusive jurisdiction over any dispute arising out of
+          or relating to these Terms or the Service, and you consent to that jurisdiction and venue.
+          Either party may nonetheless seek injunctive or equitable relief in any court of competent
+          jurisdiction to protect its intellectual property or confidential information.
+        </p>
+        <p>
+          Before filing a claim, you agree to contact us at
+          <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a> and attempt to resolve
+          the dispute informally for at least 30 days.
+        </p>
+        <p>
+          If you are a consumer resident in the European Union, the United Kingdom, or another
+          jurisdiction whose law grants you the right to bring proceedings in your local courts and
+          to benefit from mandatory local consumer protections, nothing in this section deprives you
+          of those rights.
+        </p>
+      </section>
+
+      <section id="general">
+        <h2><span class="num">22</span>General</h2>
+        <ul>
+          <li><strong>Entire agreement.</strong> These Terms and the Privacy Policy are the entire agreement between you and us regarding the Service, and supersede any prior understanding.</li>
+          <li><strong>Severability.</strong> If any provision is held unenforceable, it will be limited or removed to the minimum extent necessary and the rest remains in force.</li>
+          <li><strong>No waiver.</strong> Our failure to enforce a provision is not a waiver of it.</li>
+          <li><strong>Assignment.</strong> You may not assign these Terms without our written consent. We may assign them in connection with a transfer of the Service, on notice to you.</li>
+          <li><strong>Force majeure.</strong> We are not liable for delay or failure caused by events beyond our reasonable control, including provider outages, network failures, and changes imposed by Google.</li>
+          <li><strong>No agency.</strong> These Terms create no partnership, joint venture, employment, or agency relationship.</li>
+          <li><strong>Language.</strong> These Terms are drafted in English; an English version governs any translation.</li>
+        </ul>
+      </section>
+
+      <section id="contact">
+        <h2><span class="num">23</span>Contact</h2>
+        <p>
+          Questions about these Terms, or notices under them, go to
+          <a href="mailto:premraichura7@gmail.com">premraichura7@gmail.com</a>, addressed to Prem
+          Raichura, India. We aim to acknowledge within 7 days.
+        </p>
+      </section>
+
+      <section id="faq">
+        <h2><span class="num">24</span>Frequently asked questions</h2>
+        <div class="faq">
+          <details>
+            <summary>How much does SheetWatch cost?</summary>
+            <p>SheetWatch is currently free to use. If paid plans are introduced later, we will give at least 30 days' notice in the app before a feature you actively use becomes paid, and you will be able to export your data first.</p>
+          </details>
+          <details>
+            <summary>Does SheetWatch guarantee it will catch every change?</summary>
+            <p>No. SheetWatch polls your sheets on an interval rather than receiving instant events from Google, so a value that changes and reverts between two polls will not be detected. The Service is provided without any uptime or delivery guarantee and must not be relied on as the sole safeguard for critical processes.</p>
+          </details>
+          <details>
+            <summary>Can SheetWatch write to or delete my Google Sheets?</summary>
+            <p>Only when you tell it to. Accepting a cross-sheet suggestion writes that one value into the target cell, and removing a spreadsheet moves the file to your Google Drive trash. Routine monitoring is read-only. SheetWatch cannot undo a write — use Google Sheets version history to recover.</p>
+          </details>
+          <details>
+            <summary>Who owns the data in my spreadsheets?</summary>
+            <p>You do. SheetWatch claims no ownership of your spreadsheet content. You grant only the limited licence needed to read, store, and display that data in order to run the features you enabled, and that licence ends when you delete the content.</p>
+          </details>
+          <details>
+            <summary>What law governs these terms?</summary>
+            <p>The laws of India, without regard to conflict-of-law rules. Disputes fall under the exclusive jurisdiction of the courts of Gujarat, India, except that either party may seek injunctive relief elsewhere, and consumers in the EU, UK, and similar jurisdictions keep their mandatory local rights.</p>
+          </details>
+          <details>
+            <summary>Can I use SheetWatch for my company?</summary>
+            <p>Yes, provided you have authority to accept these Terms on the organisation's behalf and the right to access every spreadsheet you monitor. Note there is no uptime commitment or support commitment, and liability is capped as described in section 17.</p>
+          </details>
+          <details>
+            <summary>How do I close my account?</summary>
+            <p>Go to Settings → Account → Danger zone and choose Delete account, then type your account email to confirm. SheetWatch revokes its Google access and erases all your data immediately. Your spreadsheets stay untouched in Google Drive. You can also email premraichura7@gmail.com if you would rather we handled it.</p>
+          </details>
+        </div>
+      </section>
+
+      <footer>
+        <div class="foot-links">
+          <a href="/">SheetWatch</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="mailto:premraichura7@gmail.com">Contact</a>
+        </div>
+        <p>© 2026 Prem Raichura. SheetWatch is not affiliated with, endorsed by, or sponsored by Google LLC. Google, Google Sheets, and Google Drive are trademarks of Google LLC.</p>
+      </footer>
+
+    </article>
+  </div>
+</div>
+
+</body>
+</html>

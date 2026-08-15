@@ -4,7 +4,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title ?? "SheetWatch", {
       body: data.body,
       icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      badge: "/icons/icon-96.png",
       data: { url: data.url },
     })
   );

@@ -69,9 +69,30 @@ export default function Login() {
           <div className="mt-6 flex items-center gap-2">
             <PulseDot tone="live" />
             <span className="font-mono text-[11px] text-ink-400">
-              read-only access · your data stays yours
+              we only read the ranges you pick · your data stays yours
             </span>
           </div>
+
+          <p className="mt-6 border-t border-line pt-4 text-[11px] leading-relaxed text-ink-400">
+            By continuing you agree to our{" "}
+            <a href="/terms" className="text-ink-500 underline underline-offset-2 hover:text-teal-600">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="text-ink-500 underline underline-offset-2 hover:text-teal-600">
+              Privacy Policy
+            </a>
+            . SheetWatch's use of information received from Google APIs adheres to the{" "}
+            <a
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink-500 underline underline-offset-2 hover:text-teal-600"
+            >
+              Google API Services User Data Policy
+            </a>
+            , including the Limited Use requirements.
+          </p>
         </div>
       </div>
     </div>

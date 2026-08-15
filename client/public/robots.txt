@@ -1,0 +1,54 @@
+# SheetWatch — https://sheet-watch.vercel.app
+# Legal pages are public and meant to be indexed and cited.
+# Signed-in app routes and secret share boards are not.
+
+User-agent: *
+Allow: /$
+Allow: /privacy
+Allow: /terms
+Allow: /privacy.html
+Allow: /terms.html
+Allow: /icon.svg
+Allow: /icons/
+Allow: /manifest.json
+Disallow: /share/
+Disallow: /settings
+Disallow: /overview
+Disallow: /sheets
+Disallow: /tracking
+Disallow: /activity
+Disallow: /compare
+Disallow: /history/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /public/
+
+# Answer engines and AI crawlers: the legal pages are fair game, the app is not.
+User-agent: GPTBot
+Allow: /privacy
+Allow: /terms
+Disallow: /share/
+Disallow: /api/
+Disallow: /auth/
+
+User-agent: OAI-SearchBot
+Allow: /privacy
+Allow: /terms
+Disallow: /share/
+
+User-agent: ClaudeBot
+Allow: /privacy
+Allow: /terms
+Disallow: /share/
+
+User-agent: PerplexityBot
+Allow: /privacy
+Allow: /terms
+Disallow: /share/
+
+User-agent: Google-Extended
+Allow: /privacy
+Allow: /terms
+Disallow: /share/
+
+Sitemap: https://sheet-watch.vercel.app/sitemap.xml

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { Router } from "express";
 import { google } from "googleapis";
 import prisma from "../../shared/prisma";
-import { encrypt } from "../../shared/crypto";
+import { encrypt, decrypt } from "../../shared/crypto";
 import { requireAuth } from "../middleware/requireAuth";
 import { rateLimit } from "../middleware/rateLimit";
 
@@ -149,6 +149,57 @@ router.patch("/me", requireAuth, async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
+  req.session = null;
+  res.json({ ok: true });
+});
+
+// Ask Google to drop the grant entirely. Revoking a refresh token invalidates
+// every access token minted from it, so one call covers both. Best-effort: a
+// failure here must not block the local erase, or a user could be stuck unable
+// to delete their data because Google is having a bad day.
+async function revokeGoogleGrant(token: string): Promise<void> {
+  if (!token) return;
+  await fetch("https://oauth2.googleapis.com/revoke", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token }),
+  });
+}
+
+// Permanent account deletion. Every User relation in the schema is declared
+// onDelete: Cascade, so one delete takes sheets, snapshots, change history,
+// widgets, webhooks, share links, scheduled reports and notification logs with
+// it. Guarded by typing the account email so a stray click can't fire it.
+const deleteLimiter = rateLimit({ windowMs: 60 * 60_000, max: 5 });
+
+router.delete("/me", deleteLimiter, requireAuth, async (req, res) => {
+  const userId = req.session!.userId as string;
+  const { confirm } = req.body as { confirm?: string };
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, refreshToken: true, accessToken: true },
+  });
+  if (!user) {
+    res.status(401).json({ error: "User not found" });
+    return;
+  }
+
+  // Case-insensitive so the confirmation isn't a typing test, but it must be
+  // this account's own address.
+  if ((confirm ?? "").trim().toLowerCase() !== user.email.toLowerCase()) {
+    res.status(400).json({ error: "Type your account email exactly to confirm deletion" });
+    return;
+  }
+
+  try {
+    const refresh = user.refreshToken ? decrypt(user.refreshToken) : "";
+    await revokeGoogleGrant(refresh || decrypt(user.accessToken));
+  } catch (err) {
+    console.error("Google token revoke failed during account deletion:", err);
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
   req.session = null;
   res.json({ ok: true });
 });
