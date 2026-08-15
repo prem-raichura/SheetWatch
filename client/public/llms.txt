@@ -31,10 +31,10 @@ Contact: premraichura7@gmail.com
 
 ## Legal
 
-- [Privacy Policy](https://sheet-watch.vercel.app/privacy): OAuth scopes and their purpose, what
+- [Privacy Policy](https://sheetwatch.vercel.app/privacy): OAuth scopes and their purpose, what
   Google user data is accessed and stored, the Google API Services Limited Use disclosure,
   subprocessors, retention periods, security measures, user rights, and account deletion.
-- [Terms of Service](https://sheet-watch.vercel.app/terms): service description, eligibility, when
+- [Terms of Service](https://sheetwatch.vercel.app/terms): service description, eligibility, when
   SheetWatch writes to sheets, acceptable use, share links, availability limits, disclaimers,
   limitation of liability, termination, and governing law.
 
