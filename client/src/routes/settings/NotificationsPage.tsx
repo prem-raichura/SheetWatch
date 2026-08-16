@@ -178,7 +178,7 @@ export default function NotificationsPage() {
         />
       </Section>
 
-      <Section title="Compare sound" hint="Played when a new compare suggestion appears while the app is open.">
+      <Section title="Integrity sound" hint="Played when a new break appears while the app is open.">
         <SoundPicker
           value={prefs.notifications.compareSound}
           onChange={(v) => update({ notifications: { compareSound: v } })}

@@ -187,13 +187,13 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
     "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-hidden transition-shadow focus:border-teal focus:ring-4 focus:ring-teal/10";
 
   return (
-    <ModalShell onClose={onClose} maxWidth="max-w-lg" label="Comparison group">
+    <ModalShell onClose={onClose} maxWidth="max-w-lg" label="Integrity check">
       <div className="max-h-[85vh] overflow-y-auto p-6">
         <h2 className="font-display text-lg font-bold text-ink-900">
-          {group ? "Edit comparison" : "New comparison"}
+          {group ? "Edit integrity check" : "New integrity check"}
         </h2>
         <p className="mt-1 text-sm text-ink-500">
-          The master’s values are suggested onto the target sheets — never applied automatically.
+          The master’s values are proposed onto the target sheets — never applied automatically.
         </p>
 
         <div className="mt-5 space-y-4">

@@ -150,6 +150,14 @@ function KpiCard({
           <span className="truncate">
             {w.sheetLabel} · {w.cell}
           </span>
+          {w.live && (
+            <span
+              title="Outside this sheet's watched range — read live, so there's no history or 24h delta."
+              className="shrink-0 rounded bg-paper px-1 text-ink-400"
+            >
+              live
+            </span>
+          )}
           {(w.alertAbove ?? null) !== null && (
             <span className="shrink-0 rounded bg-teal-soft px-1 text-teal-600">&gt; {w.alertAbove}</span>
           )}

@@ -149,6 +149,24 @@ export async function fetchRange(
   return (res.data.values ?? []) as string[][];
 }
 
+// Read a handful of individual cells in one call. Each range is a full A1
+// reference (tab-qualified where needed); the result is positional, with null
+// for a cell that's empty or unreadable.
+export async function fetchCells(
+  spreadsheetId: string,
+  ranges: string[],
+  auth: Auth.OAuth2Client
+): Promise<(string | null)[]> {
+  if (ranges.length === 0) return [];
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.batchGet({ spreadsheetId, ranges });
+  const valueRanges = res.data.valueRanges ?? [];
+  return ranges.map((_, i) => {
+    const v = valueRanges[i]?.values?.[0]?.[0];
+    return v === undefined || v === null ? null : String(v);
+  });
+}
+
 export async function listTabs(
   spreadsheetId: string,
   auth: Auth.OAuth2Client

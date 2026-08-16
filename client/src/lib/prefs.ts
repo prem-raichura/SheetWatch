@@ -24,7 +24,7 @@ export interface UserPrefs {
     timezone: string;
   };
   time: { hour12: boolean; relative: boolean };
-  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/compare";
+  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/integrity";
   views: {
     tracking: "cards" | "list";
     sheets: "list" | "cards";

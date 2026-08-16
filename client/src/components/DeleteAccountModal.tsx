@@ -13,7 +13,7 @@ interface Props {
 const ERASED = [
   "every tracked sheet and its watch settings",
   "all change history and stored snapshots",
-  "KPI tiles, charts and comparison groups",
+  "KPI tiles, charts and integrity checks",
   "webhooks, push subscriptions and scheduled reports",
   "share links — any board you published stops resolving",
   "your notification delivery log",

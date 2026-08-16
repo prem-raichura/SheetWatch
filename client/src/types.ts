@@ -126,6 +126,8 @@ export interface KpiWidget {
   value?: string | null;
   delta24h?: number | null;
   series?: (number | null)[];
+  /** Read straight from the sheet because it sits outside the watched range. */
+  live?: boolean;
 }
 
 export type WatchMode = "range" | "rowmatch";

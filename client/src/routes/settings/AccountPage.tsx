@@ -39,7 +39,7 @@ export default function AccountPage({ user }: { user: User }) {
         <h2 className="font-display text-sm font-bold text-ink-900">Google access</h2>
         <p className="mt-2 text-sm text-ink-500">
           SheetWatch reads only the cell ranges you choose to watch. It writes to a sheet in two
-          cases you trigger yourself: when you accept a comparison suggestion, and when you remove a
+          cases you trigger yourself: when you apply a value from an integrity check, and when you remove a
           spreadsheet (which moves it to your Drive trash). If a sheet shows a “re-authorize” error,
           sign out and back in to refresh access.
         </p>

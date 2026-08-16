@@ -26,7 +26,7 @@ const tabs = [
   { to: "/sheets", label: "Sheets" },
   { to: "/tracking", label: "Tracking" },
   { to: "/activity", label: "Activity" },
-  { to: "/compare", label: "Compare" },
+  { to: "/integrity", label: "Integrity" },
   { to: "/bin", label: "Bin" },
 ];
 
@@ -202,7 +202,7 @@ export default function AppLayout({ user }: Props) {
                         {unread > 9 ? "9+" : unread}
                       </span>
                     )}
-                    {t.to === "/compare" && comparePending > 0 && (
+                    {t.to === "/integrity" && comparePending > 0 && (
                       <span className="absolute -right-1 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-teal px-1 font-mono text-[10px] font-bold leading-none text-primary-foreground">
                         {comparePending > 9 ? "9+" : comparePending}
                       </span>

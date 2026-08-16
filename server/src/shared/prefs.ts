@@ -22,12 +22,12 @@ export interface UserPrefs {
   };
   notifications: {
     sound: "off" | "chime" | "pop" | "ping" | "bell" | "blip"; // tracked-sheet changes + KPI alerts
-    compareSound: "off" | "chime" | "pop" | "ping" | "bell" | "blip"; // new compare suggestions
+    compareSound: "off" | "chime" | "pop" | "ping" | "bell" | "blip"; // new integrity breaks
     quietHours: { enabled: boolean; start: string; end: string }; // HH:MM 24h
     timezone: string; // IANA or ""
   };
   time: { hour12: boolean; relative: boolean };
-  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/compare";
+  landingTab: "/overview" | "/sheets" | "/tracking" | "/activity" | "/integrity";
   views: {
     tracking: "cards" | "list";
     sheets: "list" | "cards";
@@ -63,7 +63,17 @@ const DENSITIES = ["comfortable", "compact"] as const;
 const FONT_SCALES = ["sm", "md", "lg"] as const;
 const ANIMATIONS = ["full", "reduced", "off"] as const;
 const SOUNDS = ["off", "chime", "pop", "ping", "bell", "blip"] as const;
-const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity", "/compare"] as const;
+const LANDING_TABS = ["/overview", "/sheets", "/tracking", "/activity", "/integrity"] as const;
+// The Compare tab became Integrity; stored preferences keep the old paths.
+const LEGACY_LANDING_TABS: Record<string, UserPrefs["landingTab"]> = {
+  "/compare": "/integrity",
+  "/reconcile": "/integrity",
+};
+function normalizeLandingTab(value: unknown): unknown {
+  return typeof value === "string" && value in LEGACY_LANDING_TABS
+    ? LEGACY_LANDING_TABS[value]
+    : value;
+}
 const TRACKING_VIEWS = ["cards", "list"] as const;
 const SHEETS_VIEWS = ["list", "cards"] as const;
 const ACTIVITY_VIEWS = ["timeline", "table"] as const;
@@ -195,7 +205,7 @@ export function mergePrefs(stored: unknown): UserPrefs {
       hour12: typeof tm.hour12 === "boolean" ? tm.hour12 : d.time.hour12,
       relative: typeof tm.relative === "boolean" ? tm.relative : d.time.relative,
     },
-    landingTab: pickEnum(s.landingTab, LANDING_TABS, d.landingTab),
+    landingTab: pickEnum(normalizeLandingTab(s.landingTab), LANDING_TABS, d.landingTab),
     views: {
       tracking: pickEnum(vw.tracking, TRACKING_VIEWS, d.views.tracking),
       sheets: pickEnum(vw.sheets, SHEETS_VIEWS, d.views.sheets),
@@ -394,9 +404,11 @@ export function applyPrefsPatch(
         break;
       }
 
-      case "landingTab":
-        if (!isOneOf(value, LANDING_TABS)) return fail(enumError("landingTab", LANDING_TABS));
-        next.landingTab = value;
+      case "landingTab": {
+        const tab = normalizeLandingTab(value);
+        if (!isOneOf(tab, LANDING_TABS)) return fail(enumError("landingTab", LANDING_TABS));
+        next.landingTab = tab;
+      }
         break;
 
       case "views": {

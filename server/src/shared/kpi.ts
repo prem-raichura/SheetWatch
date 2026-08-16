@@ -1,7 +1,15 @@
 import type { Sheet } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import prisma from "./prisma";
-import { columnToIndex, rangeStartColumn, rangeStartRow } from "./google/sheets";
+import {
+  buildRange,
+  columnToIndex,
+  fetchCells,
+  rangeStartColumn,
+  rangeStartRow,
+} from "./google/sheets";
+import { oauthClientFor } from "./google/oauthClient";
+import { withRetry } from "./google/retry";
 import { parseNumeric } from "./rules";
 import { dispatch, safeHost, type ChannelTarget } from "./notify/dispatch";
 import { publishRealtime } from "./realtime";
@@ -30,6 +38,72 @@ export interface ComputedKpi {
   value: string | null;
   delta24h: number | null;
   series: (number | null)[];
+  /** Value came from a direct read because the watched grid didn't hold it. */
+  live?: boolean;
+}
+
+// A pinned cell the watched grid can't answer for is read straight from the
+// sheet. Short-lived so a dashboard that refreshes on a timer doesn't spend a
+// Google call every time.
+const LIVE_TTL = 30_000;
+const liveCache = new Map<string, { value: string | null; at: number }>();
+
+// Fill in values the snapshot couldn't supply: cells outside the watched
+// range, sheets filtered down by row-match, or a snapshot that predates the
+// cell being filled in. One batched call per spreadsheet, and only for the
+// cells that actually came back empty.
+async function fillFromSheet(
+  userId: string,
+  gaps: { kpi: ComputedKpi; spreadsheetId: string; tab: string | null }[]
+): Promise<void> {
+  const now = Date.now();
+  const pending: typeof gaps = [];
+
+  for (const gap of gaps) {
+    const key = `${gap.spreadsheetId}:${gap.tab ?? ""}:${gap.kpi.cell}`;
+    const hit = liveCache.get(key);
+    if (hit && now - hit.at < LIVE_TTL) {
+      gap.kpi.value = hit.value;
+      gap.kpi.live = hit.value !== null;
+    } else pending.push(gap);
+  }
+  if (pending.length === 0) return;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return;
+  const auth = oauthClientFor(user);
+
+  const bySpreadsheet = new Map<string, typeof pending>();
+  for (const gap of pending) {
+    const key = `${gap.spreadsheetId}:${gap.tab ?? ""}`;
+    const list = bySpreadsheet.get(key);
+    if (list) list.push(gap);
+    else bySpreadsheet.set(key, [gap]);
+  }
+
+  await Promise.all(
+    [...bySpreadsheet.values()].map(async (group) => {
+      const { spreadsheetId, tab } = group[0];
+      try {
+        const values = await withRetry(() =>
+          fetchCells(
+            spreadsheetId,
+            group.map((g) => buildRange(tab, g.kpi.cell)),
+            auth
+          )
+        );
+        group.forEach((gap, i) => {
+          const value = values[i] ?? null;
+          gap.kpi.value = value;
+          gap.kpi.live = value !== null;
+          liveCache.set(`${spreadsheetId}:${tab ?? ""}:${gap.kpi.cell}`, { value, at: Date.now() });
+        });
+      } catch (err) {
+        // A KPI that can't be read stays blank — never break the dashboard.
+        console.error("KPI live read failed:", err);
+      }
+    })
+  );
 }
 
 // Compute a user's KPI widgets (current value, 24h delta, 30-snapshot series).
@@ -45,12 +119,22 @@ export async function computeKpis(
       ...(widgetIds && widgetIds.length > 0 && { id: { in: widgetIds } }),
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    include: { sheet: { select: { label: true, range: true, lastSnapshot: true } } },
+    include: {
+      sheet: {
+        select: {
+          label: true,
+          range: true,
+          lastSnapshot: true,
+          spreadsheetId: true,
+          tab: true,
+        },
+      },
+    },
   });
 
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  return Promise.all(
+  const computed = await Promise.all(
     widgets.map(async (w) => {
       const rows = (w.sheet.lastSnapshot as string[][] | null) ?? [];
       const value = cellValue(rows, w.cell, w.sheet.range);
@@ -83,21 +167,33 @@ export async function computeKpis(
       }
 
       return {
-        id: w.id,
-        sheetId: w.sheetId,
-        sheetLabel: w.sheet.label,
-        cell: w.cell,
-        label: w.label,
-        format: w.format,
-        sortOrder: w.sortOrder,
-        alertAbove: w.alertAbove,
-        alertBelow: w.alertBelow,
-        value,
-        delta24h,
-        series,
+        kpi: {
+          id: w.id,
+          sheetId: w.sheetId,
+          sheetLabel: w.sheet.label,
+          cell: w.cell,
+          label: w.label,
+          format: w.format,
+          sortOrder: w.sortOrder,
+          alertAbove: w.alertAbove,
+          alertBelow: w.alertBelow,
+          value,
+          delta24h,
+          series,
+        } as ComputedKpi,
+        spreadsheetId: w.sheet.spreadsheetId,
+        tab: w.sheet.tab,
       };
     })
   );
+
+  // Anything the watched grid couldn't answer for gets read from the sheet.
+  await fillFromSheet(
+    userId,
+    computed.filter((c) => c.kpi.value === null)
+  );
+
+  return computed.map((c) => c.kpi);
 }
 
 type AlertState = "above" | "below" | "normal" | "unknown";

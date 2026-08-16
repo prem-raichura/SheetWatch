@@ -68,7 +68,10 @@ export default function App() {
               <Route path="/sheets" element={<SheetsTab />} />
               <Route path="/tracking" element={<TrackingTab />} />
               <Route path="/activity" element={<ActivityTab />} />
-              <Route path="/compare" element={<CompareTab />} />
+              <Route path="/integrity" element={<CompareTab />} />
+              {/* Old bookmarks and saved landing-tab preferences. */}
+              <Route path="/compare" element={<Navigate to="/integrity" replace />} />
+              <Route path="/reconcile" element={<Navigate to="/integrity" replace />} />
               <Route path="/bin" element={<BinTab />} />
               <Route path="/history/:id" element={<SheetDetail />} />
               <Route path="/settings" element={<SettingsLayout />}>

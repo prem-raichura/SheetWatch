@@ -192,17 +192,17 @@ export default function CompareTab() {
     <div className="animate-fade-up space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-ink-900">Compare</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink-900">Integrity</h1>
           <p className="mt-1 text-sm text-ink-500">
-            Keep sheets in sync — the master’s values are{" "}
-            <span className="font-medium text-ink-700">suggested</span>, you decide what to apply.
+            Guard your copies against the source sheet — breaks are{" "}
+            <span className="font-medium text-ink-700">proposed</span>, you decide what to apply.
           </p>
         </div>
         <button
           onClick={() => setModal({ open: true })}
           className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-2 text-sm font-semibold text-background shadow-xs transition-all hover:bg-foreground/85 active:scale-[0.97]"
         >
-          <Plus className="h-4 w-4" /> New comparison
+          <Plus className="h-4 w-4" /> New integrity check
         </button>
       </div>
 
@@ -224,13 +224,13 @@ export default function CompareTab() {
       {!loading && groups.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-surface px-6 py-16 text-center">
           <GitCompareArrows className="mx-auto h-8 w-8 text-ink-300" />
-          <p className="mt-3 font-semibold text-ink-700">No comparisons yet</p>
-          <p className="mt-1 text-sm text-ink-400">Create one to start syncing values across sheets.</p>
+          <p className="mt-3 font-semibold text-ink-700">No integrity checks yet</p>
+          <p className="mt-1 text-sm text-ink-400">Create one to keep values holding across sheets.</p>
           <button
             onClick={() => setModal({ open: true })}
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3.5 py-2 text-sm font-semibold text-background shadow-xs transition-all hover:bg-foreground/85 active:scale-[0.97]"
           >
-            <Plus className="h-4 w-4" /> New comparison
+            <Plus className="h-4 w-4" /> New integrity check
           </button>
         </div>
       ) : (
@@ -263,7 +263,7 @@ export default function CompareTab() {
                     </div>
                     <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-400">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal" />
-                      Auto-syncs every 2 min
+                      Auto-checks every 2 min
                       {selected.lastCheckedAt
                         ? ` · checked ${ago(selected.lastCheckedAt, nowTs)}`
                         : " · not checked yet"}
@@ -294,7 +294,7 @@ export default function CompareTab() {
                     </button>
                     <button
                       onClick={() => setConfirmDelete(selected)}
-                      aria-label="Delete comparison"
+                      aria-label="Delete integrity check"
                       className="inline-flex items-center rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink-500 transition-colors hover:border-coral/50 hover:text-coral-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -343,8 +343,8 @@ export default function CompareTab() {
               ) : sheetGroups.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-line bg-surface px-6 py-12 text-center text-sm text-ink-400">
                   {status === "pending"
-                    ? "Nothing to sync — every compared value matches."
-                    : "No suggestions here."}
+                    ? "Nothing broken — every value holds."
+                    : "No breaks here."}
                 </div>
               ) : (
                 <div className="scroll-slim max-h-[65vh] divide-y divide-line overflow-y-auto overflow-x-hidden rounded-2xl border border-line bg-surface shadow-card">
@@ -378,15 +378,15 @@ export default function CompareTab() {
               setSelectedId(created.id);
             }
             await refreshAll();
-            toast.success(modal.group ? "Comparison saved" : "Comparison created");
+            toast.success(modal.group ? "Integrity check saved" : "Integrity check created");
           }}
         />
       )}
 
       {confirmDelete && (
         <ConfirmModal
-          title="Delete comparison?"
-          message={`“${confirmDelete.name}” and its suggestions will be removed. Sheets are not affected.`}
+          title="Delete integrity check?"
+          message={`“${confirmDelete.name}” and its recorded breaks will be removed. Sheets are not affected.`}
           confirmLabel="Delete"
           danger
           onClose={() => setConfirmDelete(null)}

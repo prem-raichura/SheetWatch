@@ -7,17 +7,17 @@ interface Props {
   onSelect: (id: string) => void;
 }
 
-// Left rail: one card per comparison with an at-a-glance health signal.
+// Left rail: one card per integrity check with an at-a-glance health signal.
 export default function ComparisonList({ groups, selectedId, onSelect }: Props) {
   return (
     <div className="space-y-2">
       <h2 className="px-1 font-display text-xs font-bold uppercase tracking-wide text-ink-400">
-        Comparisons
+        Integrity checks
       </h2>
       <div className="space-y-1.5">
         {groups.map((g) => {
           const active = g.id === selectedId;
-          const inSync = g.pendingCount === 0 && g.conflictCount === 0;
+          const intact = g.pendingCount === 0 && g.conflictCount === 0;
           return (
             <button
               key={g.id}
@@ -28,9 +28,9 @@ export default function ComparisonList({ groups, selectedId, onSelect }: Props) 
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate font-display text-sm font-semibold text-ink-900">{g.name}</span>
-                {inSync ? (
+                {intact ? (
                   <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-teal-600">
-                    <Check className="h-3.5 w-3.5" /> in sync
+                    <Check className="h-3.5 w-3.5" /> intact
                   </span>
                 ) : (
                   <span className="shrink-0 rounded-full bg-teal px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground">
