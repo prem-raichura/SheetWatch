@@ -80,7 +80,7 @@ async function loadPreview(
 const HEADINGS: Record<SheetPickerProps["select"], { title: string; hint: string; cta: string }> = {
   range: {
     title: "Select what to watch",
-    hint: "Drag across cells, or click a column letter / row number. Hold Shift to extend the selection.",
+    hint: "Drag or Shift-click for one block, ⌘/Ctrl-click to start another — blocks don't have to touch.",
     cta: "Use this range",
   },
   boundedRange: {
@@ -96,10 +96,42 @@ const HEADINGS: Record<SheetPickerProps["select"], { title: string; hint: string
   },
   columns: {
     title: "Pick columns",
-    hint: "Click a column letter, Shift-click to take a span, ⌘/Ctrl-click to add or drop one.",
+    hint: "Columns don't have to be side by side — add scattered ones with ⌘/Ctrl-click.",
     cta: "Use these columns",
   },
 };
+
+// Spelled out on screen, because the gestures differ per mode and nothing else
+// tells you that a range field can only hold one block.
+const GESTURES: Record<SheetPickerProps["select"], string[]> = {
+  range: [
+    "Drag across cells",
+    "Shift-click to extend",
+    "Click a row number or column letter",
+    "⌘/Ctrl-click to add another block",
+  ],
+  boundedRange: ["Drag across cells", "Shift-click to extend", "Click a row number or column letter", "One block only"],
+  cell: ["Click a cell"],
+  column: ["Click a column letter", "…or any cell in it"],
+  columns: ["Click a column", "Shift-click for a span", "⌘/Ctrl-click to add or drop one"],
+};
+
+// A finished block of the selection, in the same shape the rect math produces.
+interface Block {
+  mode: SelectionMode;
+  minR: number;
+  maxR: number;
+  minC: number;
+  maxC: number;
+}
+
+function blockToA1(b: Block): string {
+  if (b.mode === "col") return `${colLetter(b.minC)}:${colLetter(b.maxC)}`;
+  if (b.mode === "row") return `${b.minR + 1}:${b.maxR + 1}`;
+  const a = `${colLetter(b.minC)}${b.minR + 1}`;
+  const z = `${colLetter(b.maxC)}${b.maxR + 1}`;
+  return a === z ? a : `${a}:${z}`;
+}
 
 export default function SheetPicker(props: SheetPickerProps) {
   const { source, tab, restrict, preferHeaderText } = props;
@@ -110,6 +142,9 @@ export default function SheetPicker(props: SheetPickerProps) {
   const colsOnly = select === "column" || select === "columns";
   const singleCell = select === "cell";
   const multiColumns = select === "columns";
+  // Only the watch range is stored as several blocks; a chart range and a KPI
+  // cell each have to stay one box.
+  const multiBlocks = select === "range";
 
   const [rows, setRows] = useState<string[][]>([]);
   const [depth, setDepth] = useState(BASE_DEPTH);
@@ -123,6 +158,10 @@ export default function SheetPicker(props: SheetPickerProps) {
   const [dragging, setDragging] = useState(false);
   // Disjoint columns (⌘/Ctrl-click) — only meaningful in "columns" mode.
   const [extra, setExtra] = useState<Set<number>>(new Set());
+  // Blocks already committed with ⌘/Ctrl; the live rect is the one being drawn.
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  // Shown when ⌘/Ctrl-click is used somewhere it can't apply.
+  const [note, setNote] = useState<string | null>(null);
 
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -202,13 +241,29 @@ export default function SheetPicker(props: SheetPickerProps) {
       return;
     }
 
-    const sel = props.initial ? parseA1Selection(props.initial) : null;
+    // A watch range can hold several blocks: seed all but the last as
+    // committed, and leave the last one live so Shift keeps resizing it.
+    const tokens = (props.initial ?? "").split(",").filter((t) => t.trim());
+    const parsed = tokens
+      .map((t) => parseA1Selection(t))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const fits = (s: NonNullable<ReturnType<typeof parseA1Selection>>) =>
+      Math.max(s.anchor.c, s.focus.c) < COLS &&
+      (s.mode === "col" || Math.max(s.anchor.r, s.focus.r) < rowCount);
+    if (parsed.length !== tokens.length || !parsed.every(fits)) return;
+
+    const asBlock = (s: NonNullable<ReturnType<typeof parseA1Selection>>): Block => ({
+      mode: s.mode,
+      minR: s.mode === "col" ? 0 : Math.min(s.anchor.r, s.focus.r),
+      maxR: s.mode === "col" ? rowCount - 1 : Math.max(s.anchor.r, s.focus.r),
+      minC: s.mode === "row" ? 0 : Math.min(s.anchor.c, s.focus.c),
+      maxC: s.mode === "row" ? COLS - 1 : Math.max(s.anchor.c, s.focus.c),
+    });
+
+    if (multiBlocks && parsed.length > 1) setBlocks(parsed.slice(0, -1).map(asBlock));
+
+    const sel = parsed[parsed.length - 1];
     if (!sel) return;
-    const maxR = Math.max(sel.anchor.r, sel.focus.r);
-    const maxC = Math.max(sel.anchor.c, sel.focus.c);
-    // Off-grid (row 800, column AB): start empty rather than silently narrowing
-    // what the field already holds.
-    if (maxC >= COLS || (sel.mode !== "col" && maxR >= rowCount)) return;
     if (sel.mode === "col" && !colsOnly && !rowsPickable) return;
 
     setMode(sel.mode);
@@ -222,7 +277,7 @@ export default function SheetPicker(props: SheetPickerProps) {
       setAnchor(sel.anchor);
       setFocus(singleCell ? sel.anchor : sel.focus);
     }
-  }, [loading, rowCount, props, colsOnly, rowsPickable, singleCell]);
+  }, [loading, rowCount, props, colsOnly, rowsPickable, singleCell, multiBlocks]);
 
   // Keyboard works without clicking first.
   useEffect(() => {
@@ -239,16 +294,40 @@ export default function SheetPicker(props: SheetPickerProps) {
         }
       : null;
 
-  const inRect = useCallback(
+  // Blocks committed with ⌘/Ctrl plus the one currently being drawn.
+  const live: Block | null = rect ? { mode, ...rect } : null;
+  const allBlocks: Block[] = live ? [...blocks, live] : blocks;
+
+  const inAnyBlock = useCallback(
     (r: number, c: number) =>
-      !!rect && r >= rect.minR && r <= rect.maxR && c >= rect.minC && c <= rect.maxC,
-    [rect]
+      allBlocks.some((b) => r >= b.minR && r <= b.maxR && c >= b.minC && c <= b.maxC),
+    [allBlocks]
   );
 
   // ---- selection handlers -------------------------------------------------
 
+  // ⌘/Ctrl keeps what's already selected and starts a fresh block next to it.
+  const startNewBlock = () => {
+    if (live) setBlocks((prev) => [...prev, live]);
+  };
+
   const selectColumn = (c: number, e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
     if (singleCell || !columnAllowed(c)) return;
+    const withMeta = e.metaKey || e.ctrlKey;
+    if (!withMeta) setNote(null);
+    else if (select === "column") setNote("This field takes a single column.");
+    else if (!multiColumns && !multiBlocks)
+      setNote("This field takes one block — drag or Shift-click to size it.");
+
+    // Watch range: ⌘/Ctrl keeps the current selection and adds a column block.
+    if (multiBlocks && withMeta) {
+      startNewBlock();
+      setMode("col");
+      setAnchor({ r: 0, c });
+      setFocus({ r: rowCount - 1, c });
+      setDragging(true);
+      return;
+    }
 
     // ⌘/Ctrl toggles one column without disturbing the rest, so "A, C, F" is
     // reachable. Any span already picked is folded in first — otherwise a
@@ -276,17 +355,24 @@ export default function SheetPicker(props: SheetPickerProps) {
     setMode("col");
     setAnchor({ r: 0, c });
     setFocus({ r: rowCount - 1, c });
+    if (multiBlocks) setBlocks([]);
     if (multiColumns && !e.shiftKey) setExtra(new Set());
     if (!colsOnly || multiColumns) setDragging(true);
   };
 
-  const selectRow = (r: number, e: { shiftKey: boolean }) => {
+  const selectRow = (r: number, e: { shiftKey: boolean; metaKey?: boolean; ctrlKey?: boolean }) => {
     if (!rowsPickable) return;
+    const withMeta = Boolean(e.metaKey || e.ctrlKey);
+    if (withMeta && !multiBlocks) {
+      setNote("Rows have to be one run — Shift-click a second row number for a span.");
+    }
     if (box) return; // a restricted pick can't take a whole sheet row
     if (e.shiftKey && mode === "row" && anchor) {
       setFocus({ r, c: COLS - 1 });
       return;
     }
+    if (multiBlocks && withMeta) startNewBlock();
+    else if (multiBlocks) setBlocks([]);
     setMode("row");
     setAnchor({ r, c: 0 });
     setFocus({ r, c: COLS - 1 });
@@ -306,15 +392,30 @@ export default function SheetPicker(props: SheetPickerProps) {
     }
     if (!cellAllowed(r, c)) return;
 
+    const withMeta = e.metaKey || e.ctrlKey;
+    if (!withMeta) setNote(null);
+    else if (!multiBlocks) {
+      // Nowhere to put a second block: this field holds one A1 range.
+      setNote(
+        singleCell
+          ? "This field takes a single cell."
+          : "This field takes one block — drag or Shift-click to size it."
+      );
+    }
+
     setMode("cell");
     if (singleCell) {
       setAnchor({ r, c });
       setFocus({ r, c });
       return;
     }
-    if (e.shiftKey && mode === "cell" && anchor) {
+
+    // ⌘/Ctrl banks the block being drawn and starts another one here.
+    if (multiBlocks && withMeta) startNewBlock();
+    if (e.shiftKey && mode === "cell" && anchor && !withMeta) {
       setFocus({ r, c });
     } else {
+      if (multiBlocks && !withMeta) setBlocks([]);
       setAnchor({ r, c });
       setFocus({ r, c });
     }
@@ -407,6 +508,9 @@ export default function SheetPicker(props: SheetPickerProps) {
   }, [extra, rect, mode]);
 
   const value = useMemo(() => {
+    // The watch range is stored as a comma-separated list of blocks.
+    if (select === "range") return allBlocks.map(blockToA1).join(", ");
+
     if (!rect) return "";
     const { minR, maxR, minC, maxC } = rect;
 
@@ -430,7 +534,9 @@ export default function SheetPicker(props: SheetPickerProps) {
     const a = `${colLetter(minC)}${minR + 1}`;
     const b = `${colLetter(maxC)}${maxR + 1}`;
     return a === b ? a : `${a}:${b}`;
-  }, [rect, mode, rows, rowCount, select, preferHeaderText]);
+    // allBlocks changes with every rect change, which is what drives the
+    // multi-block string above.
+  }, [rect, mode, rows, rowCount, select, preferHeaderText, allBlocks]);
 
   const label = select === "columns" ? selectedColumns.join(", ") : value;
   const canCommit = select === "columns" ? selectedColumns.length > 0 : !!value;
@@ -457,8 +563,18 @@ export default function SheetPicker(props: SheetPickerProps) {
               {props.title ?? heading.title}
             </h2>
             <p className="mt-0.5 text-xs text-ink-400">{props.hint ?? heading.hint}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {GESTURES[select].map((g) => (
+                <span
+                  key={g}
+                  className="rounded-full border border-line bg-paper px-2 py-0.5 font-mono text-[10px] text-ink-500"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
             {box && (
-              <p className="mt-1 font-mono text-[11px] text-ink-400">
+              <p className="mt-1.5 font-mono text-[11px] text-ink-400">
                 Limited to {restrict} — cells outside it are dimmed.
               </p>
             )}
@@ -491,7 +607,8 @@ export default function SheetPicker(props: SheetPickerProps) {
                   <th className="sticky left-0 top-0 z-10 h-7 w-10 bg-paper" />
                   {Array.from({ length: COLS }).map((_, c) => {
                     const active =
-                      (rect && mode === "col" && c >= rect.minC && c <= rect.maxC) || extra.has(c);
+                      allBlocks.some((b) => b.mode === "col" && c >= b.minC && c <= b.maxC) ||
+                      extra.has(c);
                     const dim = !columnAllowed(c) || singleCell;
                     return (
                       <th
@@ -509,7 +626,9 @@ export default function SheetPicker(props: SheetPickerProps) {
                             ? "bg-teal text-primary-foreground"
                             : dim
                               ? ""
-                              : rect && mode !== "row" && c >= rect.minC && c <= rect.maxC
+                              : allBlocks.some(
+                                    (b) => b.mode !== "row" && c >= b.minC && c <= b.maxC
+                                  )
                                 ? "bg-teal-soft text-teal-600"
                                 : "bg-paper text-ink-500 hover:bg-teal-soft"
                         }`}
@@ -532,7 +651,7 @@ export default function SheetPicker(props: SheetPickerProps) {
                       className={`sticky left-0 z-[1] h-7 w-10 border-r border-line px-1 text-center font-semibold ${
                         rowsPickable && !box ? "cursor-pointer" : "cursor-default text-ink-300"
                       } ${
-                        rect && mode !== "col" && r >= rect.minR && r <= rect.maxR
+                        allBlocks.some((b) => b.mode !== "col" && r >= b.minR && r <= b.maxR)
                           ? mode === "row"
                             ? "bg-teal text-primary-foreground"
                             : "bg-teal-soft text-teal-600"
@@ -544,7 +663,10 @@ export default function SheetPicker(props: SheetPickerProps) {
                     {Array.from({ length: COLS }).map((_, c) => {
                       const val = rows[r]?.[c] ?? "";
                       const blocked = !cellAllowed(r, c);
-                      const on = mode === "col" ? inRect(r, c) || extra.has(c) : inRect(r, c);
+                      const on =
+                        mode === "col"
+                          ? inAnyBlock(r, c) || extra.has(c)
+                          : inAnyBlock(r, c);
                       const isFocus = focus?.r === r && focus?.c === c;
                       return (
                         <td
@@ -595,9 +717,13 @@ export default function SheetPicker(props: SheetPickerProps) {
             >
               <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} /> Refresh
             </button>
-            <span>
-              showing {Math.min(rows.length, depth)} rows × A–Z — anything further can still be typed
-            </span>
+            {note ? (
+              <span className="text-coral-600">{note}</span>
+            ) : (
+              <span>
+                showing {Math.min(rows.length, depth)} rows × A–Z — anything further can still be typed
+              </span>
+            )}
           </div>
         </div>
 
@@ -613,10 +739,21 @@ export default function SheetPicker(props: SheetPickerProps) {
                       : label
                     : label}
                 </span>
-                {cellCount > 1 && (
-                  <span className="ml-2 text-xs text-ink-400">
-                    {rect!.maxR - rect!.minR + 1} × {rect!.maxC - rect!.minC + 1} · {cellCount} cells
-                  </span>
+                {allBlocks.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setBlocks((prev) => prev.slice(0, -1))}
+                    disabled={blocks.length === 0}
+                    className="ml-2 rounded-md px-2 py-0.5 text-xs text-ink-400 transition-colors hover:bg-paper hover:text-coral-600 disabled:opacity-40"
+                  >
+                    {allBlocks.length} blocks · undo last
+                  </button>
+                ) : (
+                  cellCount > 1 && (
+                    <span className="ml-2 text-xs text-ink-400">
+                      {rect!.maxR - rect!.minR + 1} × {rect!.maxC - rect!.minC + 1} · {cellCount} cells
+                    </span>
+                  )
                 )}
               </span>
             ) : (

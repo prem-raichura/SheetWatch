@@ -1,7 +1,7 @@
 import type { Sheet } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import prisma from "./prisma";
-import { columnToIndex, rangeStartColumn } from "./google/sheets";
+import { columnToIndex, rangeStartColumn, rangeStartRow } from "./google/sheets";
 import { parseNumeric } from "./rules";
 import { dispatch, safeHost, type ChannelTarget } from "./notify/dispatch";
 import { publishRealtime } from "./realtime";
@@ -12,8 +12,7 @@ function cellValue(rows: string[][], cell: string, range: string): string | null
   const m = /^([A-Za-z]{1,3})(\d+)$/.exec(cell.trim());
   if (!m) return null;
   const col = columnToIndex(m[1]) - rangeStartColumn(range);
-  const rowStart = Number((range.trim().match(/^[A-Za-z]{1,3}(\d+)/) ?? [])[1] ?? 1);
-  const row = Number(m[2]) - rowStart;
+  const row = Number(m[2]) - rangeStartRow(range);
   if (row < 0 || col < 0) return null;
   return rows[row]?.[col] ?? null;
 }

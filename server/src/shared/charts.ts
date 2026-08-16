@@ -1,5 +1,5 @@
 import type { ChartWidget } from "@prisma/client";
-import { columnToIndex, rangeStartColumn } from "./google/sheets";
+import { columnToIndex, rangeStartColumn, rangeStartRow } from "./google/sheets";
 import { parseNumeric } from "./rules";
 
 export interface ChartData {
@@ -38,7 +38,7 @@ export function extractChartData(
   if (!box) return { labels: [], series: [] };
 
   const colOffset = rangeStartColumn(sheetRange);
-  const rowStart = Number((sheetRange.trim().match(/^[A-Za-z]{1,3}(\d+)/) ?? [])[1] ?? 1);
+  const rowStart = rangeStartRow(sheetRange);
 
   const grid: string[][] = [];
   for (let r = box.r1; r <= box.r2; r++) {

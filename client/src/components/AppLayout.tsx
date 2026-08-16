@@ -27,6 +27,7 @@ const tabs = [
   { to: "/tracking", label: "Tracking" },
   { to: "/activity", label: "Activity" },
   { to: "/compare", label: "Compare" },
+  { to: "/bin", label: "Bin" },
 ];
 
 export default function AppLayout({ user }: Props) {

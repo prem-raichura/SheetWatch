@@ -11,6 +11,7 @@ import {
   fetchRange,
   buildRange,
   listTabs,
+  isValidRange,
 } from "../../shared/google/sheets";
 import {
   listSpreadsheets,
@@ -333,6 +334,15 @@ router.patch("/:id", requireAuth, async (req, res) => {
         res.status(400).json({ error: "Unknown webhook id" });
         return;
       }
+    }
+
+    // A range may hold several blocks ("B2:D50, G1:G9"); every one must parse,
+    // or the poller would fetch a bounding box for a range nobody meant.
+    if (typeof body.range === "string" && body.range.trim() && !isValidRange(body.range)) {
+      res.status(400).json({
+        error: "Range must be A1 blocks like B2:D50, E11, 5:5 or C:C — separate several with commas",
+      });
+      return;
     }
 
     // projectId must reference the caller's own project.

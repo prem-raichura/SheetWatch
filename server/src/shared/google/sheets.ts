@@ -13,6 +13,116 @@ export function buildRange(tab: string | null | undefined, range: string): strin
   return `'${safe}'!${range}`;
 }
 
+// A watched range may be several blocks: "B2:D50, G1:G9". Columns are
+// zero-based, rows one-based, and an open edge (whole column / whole row) is
+// Infinity. One block behaves exactly as it always did.
+export interface A1Block {
+  c1: number;
+  c2: number;
+  r1: number;
+  r2: number;
+}
+
+const CELL = /^([A-Za-z]{1,3})(\d+)$/;
+const COLS = /^([A-Za-z]{1,3})$/;
+const ROWS = /^(\d+)$/;
+
+function parseBlock(token: string): A1Block | null {
+  const t = token.trim();
+  if (!t) return null;
+  const [a, b, extra] = t.split(":");
+  if (extra !== undefined) return null;
+  const end = b === undefined ? a : b;
+
+  const ca = CELL.exec(a);
+  const cb = CELL.exec(end);
+  if (ca && cb) {
+    const c1 = columnToIndex(ca[1]);
+    const c2 = columnToIndex(cb[1]);
+    const r1 = Number(ca[2]);
+    const r2 = Number(cb[2]);
+    return {
+      c1: Math.min(c1, c2),
+      c2: Math.max(c1, c2),
+      r1: Math.min(r1, r2),
+      r2: Math.max(r1, r2),
+    };
+  }
+
+  const la = COLS.exec(a);
+  const lb = COLS.exec(end);
+  if (la && lb) {
+    const c1 = columnToIndex(la[1]);
+    const c2 = columnToIndex(lb[1]);
+    return { c1: Math.min(c1, c2), c2: Math.max(c1, c2), r1: 1, r2: Infinity };
+  }
+
+  const na = ROWS.exec(a);
+  const nb = ROWS.exec(end);
+  if (na && nb) {
+    const r1 = Number(na[1]);
+    const r2 = Number(nb[1]);
+    return { c1: 0, c2: Infinity, r1: Math.min(r1, r2), r2: Math.max(r1, r2) };
+  }
+
+  return null;
+}
+
+// Every block in a range string. Unparsable tokens are dropped; an entirely
+// unparsable range yields [].
+export function parseRanges(range: string): A1Block[] {
+  return (range ?? "")
+    .split(",")
+    .map(parseBlock)
+    .filter((b): b is A1Block => b !== null);
+}
+
+export function isValidRange(range: string): boolean {
+  const tokens = (range ?? "").split(",").filter((t) => t.trim());
+  return tokens.length > 0 && tokens.every((t) => parseBlock(t) !== null);
+}
+
+// The single A1 range that covers every block — what actually gets fetched, so
+// a multi-block watch still costs one Sheets call.
+export function boundingA1(range: string): string {
+  const blocks = parseRanges(range);
+  if (blocks.length === 0) return range.trim();
+
+  const minC = Math.min(...blocks.map((b) => b.c1));
+  const maxC = Math.max(...blocks.map((b) => b.c2));
+  const minR = Math.min(...blocks.map((b) => b.r1));
+  const maxR = Math.max(...blocks.map((b) => b.r2));
+
+  const colsOpen = !Number.isFinite(maxC);
+  const rowsOpen = !Number.isFinite(maxR);
+
+  if (!colsOpen && !rowsOpen) {
+    return `${indexToColumn(minC)}${minR}:${indexToColumn(maxC)}${maxR}`;
+  }
+  // Whole rows and whole columns together: everything worth reading.
+  if (colsOpen && rowsOpen) return "A:ZZ";
+  // Whole columns: bounded left/right, open at the bottom ("B1:G").
+  if (rowsOpen) return `${indexToColumn(minC)}${minR}:${indexToColumn(maxC)}`;
+  // Whole rows: bounded top/bottom, every column ("2:50").
+  return `${minR}:${maxR}`;
+}
+
+// Blank out everything the user didn't select. The fetched grid is the
+// bounding box, so cells between two blocks would otherwise be watched.
+export function maskOutsideBlocks(rows: string[][], range: string): string[][] {
+  const blocks = parseRanges(range);
+  if (blocks.length < 2) return rows;
+
+  const originC = rangeStartColumn(range);
+  const originR = rangeStartRow(range);
+  const inside = (r: number, c: number) =>
+    blocks.some((b) => c >= b.c1 && c <= b.c2 && r >= b.r1 && r <= b.r2);
+
+  return rows.map((row, ri) =>
+    row.map((value, ci) => (inside(originR + ri, originC + ci) ? value : ""))
+  );
+}
+
 export async function validateAndSnapshot(
   spreadsheetId: string,
   range: string,
@@ -70,16 +180,25 @@ export function indexToColumn(i: number): string {
 }
 
 // Zero-based index of the first column of an A1 range ("B2:D50" → 1).
-// Row-only ranges ("5:5") and unparsable input yield 0.
+// Row-only ranges ("5:5") and unparsable input yield 0. With several blocks
+// this is the bounding box's first column — the origin of the fetched grid.
 export function rangeStartColumn(range: string): number {
-  const m = range.trim().match(/^([A-Za-z]{1,3})\d*/);
-  return m ? columnToIndex(m[1]) : 0;
+  const blocks = parseRanges(range);
+  if (blocks.length === 0) {
+    const m = range.trim().match(/^([A-Za-z]{1,3})\d*/);
+    return m ? columnToIndex(m[1]) : 0;
+  }
+  return Math.min(...blocks.map((b) => b.c1));
 }
 
 // 1-based row number of the first row of an A1 range ("B2:D50" → 2, "C:C" → 1).
 export function rangeStartRow(range: string): number {
-  const m = range.trim().match(/^[A-Za-z]*?(\d+)/);
-  return m ? Number(m[1]) : 1;
+  const blocks = parseRanges(range);
+  if (blocks.length === 0) {
+    const m = range.trim().match(/^[A-Za-z]*?(\d+)/);
+    return m ? Number(m[1]) : 1;
+  }
+  return Math.min(...blocks.map((b) => b.r1));
 }
 
 // Resolve a column reference against a grid's header row. Matches a header name
@@ -135,11 +254,13 @@ export async function fetchScoped(
   sheet: ScopeInput,
   auth: Auth.OAuth2Client
 ): Promise<string[][]> {
-  const rows = await fetchRange(
+  // One call for the bounding box, then blank whatever falls between blocks.
+  const raw = await fetchRange(
     sheet.spreadsheetId,
-    buildRange(sheet.tab, sheet.range),
+    buildRange(sheet.tab, boundingA1(sheet.range)),
     auth
   );
+  const rows = maskOutsideBlocks(raw, sheet.range);
 
   if (sheet.watchMode !== "rowmatch" || !sheet.matchColumn) return rows;
 

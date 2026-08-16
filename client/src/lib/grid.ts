@@ -17,12 +17,25 @@ export function indexToColumn(i: number): string {
   return out;
 }
 
-// Zero-based column and 1-based row of an A1 range's first cell.
+// Zero-based column and 1-based row where a watched grid starts.
 // "B2:D50" → { col: 1, row: 2 }; row-only/unparsable → { col: 0, row: 1 }.
+// A multi-block range ("B2:D50, G1:G9") is fetched as its bounding box, so the
+// origin is the smallest column and row across every block — mirrors
+// rangeStartColumn/rangeStartRow on the server.
 export function rangeStart(range: string): { col: number; row: number } {
-  const m = range.trim().match(/^([A-Za-z]{1,3})(\d*)/);
-  if (!m) return { col: 0, row: 1 };
-  return { col: columnToIndex(m[1]), row: m[2] ? Number(m[2]) : 1 };
+  const tokens = (range ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  if (tokens.length === 0) return { col: 0, row: 1 };
+
+  let col = Infinity;
+  let row = Infinity;
+  for (const token of tokens) {
+    const m = token.match(/^([A-Za-z]{1,3})(\d*)/);
+    // A row-only block ("5:9") spans every column; a column-only one ("C:F")
+    // spans every row.
+    col = Math.min(col, m ? columnToIndex(m[1]) : 0);
+    row = Math.min(row, m && m[2] ? Number(m[2]) : 1);
+  }
+  return { col: Number.isFinite(col) ? col : 0, row: Number.isFinite(row) ? row : 1 };
 }
 
 // Grid-relative cell ref "R3C2" → { row: 3, col: 2 } (1-based) or null.

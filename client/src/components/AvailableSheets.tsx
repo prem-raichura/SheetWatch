@@ -14,6 +14,8 @@ interface Props {
   onChanged: () => void;
   emptyHint?: string;
   view?: "list" | "cards";
+  /** Overrides the "N sheets" caption — used by the pasted-link result. */
+  label?: string;
 }
 
 export default function AvailableSheets({
@@ -24,6 +26,7 @@ export default function AvailableSheets({
   onChanged,
   emptyHint,
   view = "list",
+  label,
 }: Props) {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [toTrash, setToTrash] = useState<AvailableSheet | null>(null);
@@ -137,7 +140,7 @@ export default function AvailableSheets({
       <div>
         <div className="mb-3 flex items-center justify-between">
           <span className="font-mono text-[11px] uppercase tracking-wider text-ink-400">
-            {available.length} sheets
+            {label ?? `${available.length} sheets`}
           </span>
           <button
             onClick={onRefresh}
@@ -195,7 +198,7 @@ export default function AvailableSheets({
     <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
       <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
         <span className="font-mono text-[11px] uppercase tracking-wider text-ink-400">
-          {available.length} sheets
+          {label ?? `${available.length} sheets`}
         </span>
         <button
           onClick={onRefresh}

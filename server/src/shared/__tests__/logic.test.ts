@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { diffGrid, diffGridSmart, hashGrid } from "../google/diff";
-import { columnToIndex, indexToColumn, rangeStartColumn } from "../google/sheets";
+import {
+  columnToIndex,
+  indexToColumn,
+  rangeStartColumn,
+  rangeStartRow,
+  parseRanges,
+  isValidRange,
+  boundingA1,
+  maskOutsideBlocks,
+} from "../google/sheets";
 import { matchesRules, validateRules, parseNumeric, AlertRule } from "../rules";
 import { csvEscape, changesToCsv } from "../csv";
 import { validateWebhookUrl } from "../notify/webhook";
@@ -67,6 +76,49 @@ describe("column helpers", () => {
     expect(rangeStartColumn("B2:D50")).toBe(1);
     expect(rangeStartColumn("5:5")).toBe(0);
     expect(rangeStartColumn("A1:Z1000")).toBe(0);
+  });
+});
+
+describe("multi-block ranges", () => {
+  it("parses every block, and rejects nonsense", () => {
+    expect(parseRanges("B2:D50, G1:G9")).toHaveLength(2);
+    expect(parseRanges("E11")[0]).toMatchObject({ c1: 4, c2: 4, r1: 11, r2: 11 });
+    expect(parseRanges("C:F")[0]).toMatchObject({ c1: 2, c2: 5, r1: 1, r2: Infinity });
+    expect(parseRanges("5:9")[0]).toMatchObject({ c1: 0, c2: Infinity, r1: 5, r2: 9 });
+    expect(isValidRange("B2:D50, G1:G9")).toBe(true);
+    expect(isValidRange("B2:D50, nope")).toBe(false);
+    expect(isValidRange("")).toBe(false);
+  });
+
+  it("fetches one bounding box for several blocks", () => {
+    expect(boundingA1("B2:D50, G1:G9")).toBe("B1:G50");
+    expect(boundingA1("A1:Z1000")).toBe("A1:Z1000");
+    expect(boundingA1("C:F")).toBe("C1:F"); // whole columns stay open at the bottom
+    expect(boundingA1("5:9")).toBe("5:9");
+    expect(boundingA1("B2:D5, 8:9")).toBe("2:9"); // a whole row spans every column
+    expect(boundingA1("C:D, 8:9")).toBe("A:ZZ"); // open in both directions
+  });
+
+  it("starts the grid at the bounding box's origin", () => {
+    expect(rangeStartColumn("G1:G9, B2:D50")).toBe(1);
+    expect(rangeStartRow("G4:G9, B2:D50")).toBe(2);
+  });
+
+  it("blanks cells that fall between blocks", () => {
+    // Bounding box of "A1:B2, D1:D2" is A1:D2 — column C is not watched.
+    const rows = [
+      ["a1", "b1", "c1", "d1"],
+      ["a2", "b2", "c2", "d2"],
+    ];
+    expect(maskOutsideBlocks(rows, "A1:B2, D1:D2")).toEqual([
+      ["a1", "b1", "", "d1"],
+      ["a2", "b2", "", "d2"],
+    ]);
+  });
+
+  it("leaves a single-block range untouched", () => {
+    const rows = [["a", "b"]];
+    expect(maskOutsideBlocks(rows, "A1:B1")).toBe(rows);
   });
 });
 

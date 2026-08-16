@@ -1,11 +1,21 @@
 import { useState } from "react";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Search } from "lucide-react";
 import { useAvailableSheets } from "../hooks/useAvailableSheets";
 import AvailableSheets from "../components/AvailableSheets";
-import AddSheetBox from "../components/AddSheetBox";
-import DriveBin from "../components/DriveBin";
 import ViewToggle from "../components/ViewToggle";
+import Spinner from "../components/Spinner";
+import { api } from "../lib/api";
+import type { AvailableSheet, Sheet } from "../types";
 import { usePrefs } from "../providers/PrefsProvider";
+
+// One box does both jobs: plain words filter the list, a Google Sheets link (or
+// a bare spreadsheet id) is a sheet to look up. Returns the spreadsheet id.
+function sheetIdFromLink(value: string): string | null {
+  const s = value.trim();
+  const m = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (m) return m[1];
+  return /^[a-zA-Z0-9-_]{30,}$/.test(s) ? s : null;
+}
 
 type Filter = "all" | "tracked" | "untracked";
 type OwnerFilter = "all" | "mine" | "shared";
@@ -21,16 +31,82 @@ const SORTS: { value: Sort; label: string }[] = [
 export default function SheetsTab() {
   const { available, loading, error, refetch } = useAvailableSheets();
   const { prefs, update } = usePrefs();
-  const [showAddByUrl, setShowAddByUrl] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [owner, setOwner] = useState<OwnerFilter>("all");
   const [sort, setSort] = useState<Sort>("edited_desc");
-  const [binOpen, setBinOpen] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  // The pasted-link result. Only the id is kept: the card is read back out of
+  // the live list when it's there, so tracking it updates the card too.
+  const [linkedId, setLinkedId] = useState<string | null>(null);
+  const [linkedStub, setLinkedStub] = useState<AvailableSheet | null>(null);
 
   const trackedCount = available.filter((s) => s.tracked).length;
   const mineCount = available.filter((s) => s.ownedByMe).length;
-  const q = query.trim().toLowerCase();
+  const linkId = sheetIdFromLink(query);
+  // A pasted link isn't a name, so it must not filter the list to nothing.
+  const q = linkId ? "" : query.trim().toLowerCase();
+
+  const linkedSheet = linkedId
+    ? (available.find((s) => s.spreadsheetId === linkedId) ?? linkedStub)
+    : null;
+
+  const clearLinked = () => {
+    setLinkedId(null);
+    setLinkedStub(null);
+  };
+
+  // A sheet reached only by link may never appear in the Drive list, so its
+  // card can't read its own tracked state from there — ask the tracked list.
+  const syncLinkedStub = async (id: string) => {
+    try {
+      const tracked = await api.get<Sheet[]>("/api/sheets");
+      const hit = tracked.find((s) => s.spreadsheetId === id);
+      setLinkedStub((prev) =>
+        prev && prev.spreadsheetId === id
+          ? { ...prev, tracked: Boolean(hit), sheetId: hit?.id ?? null }
+          : prev
+      );
+    } catch {
+      /* leave the card as it is */
+    }
+  };
+
+  // Searching a link looks the sheet up and shows it as a card — tracking is a
+  // separate, deliberate click on that card.
+  const search = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkId || resolving) return; // plain text already filters as you type
+    setResolving(true);
+    setLinkError(null);
+    try {
+      const known = available.find((s) => s.spreadsheetId === linkId);
+      if (known) {
+        setLinkedStub(null);
+      } else {
+        // Shared by link and not in Drive: ask the server for its title.
+        const found = await api.get<{ spreadsheetId: string; name: string }>(
+          `/api/compare/resolve?url=${encodeURIComponent(query.trim())}`
+        );
+        setLinkedStub({
+          spreadsheetId: found.spreadsheetId,
+          name: found.name,
+          ownedByMe: false,
+          modifiedTime: "",
+          tracked: false,
+          sheetId: null,
+        });
+      }
+      setLinkedId(linkId);
+      setQuery("");
+    } catch (err) {
+      clearLinked();
+      setLinkError(err instanceof Error ? err.message : "Couldn’t open that sheet");
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const filtered = available
     .filter((s) => {
@@ -91,48 +167,64 @@ export default function SheetsTab() {
 
       {!loading && !error && (
         <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <form onSubmit={search} className="flex flex-col gap-2 sm:flex-row">
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your sheets…"
-              aria-label="Search your sheets"
-              className="flex-1 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-sm shadow-card outline-hidden transition-shadow focus:border-teal focus:ring-4 focus:ring-teal/10"
-            />
-            <button
-              onClick={() => setShowAddByUrl((v) => !v)}
-              aria-expanded={showAddByUrl}
-              className={`shrink-0 rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-xs transition-all active:scale-[0.97] ${
-                showAddByUrl
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-line bg-surface text-ink-700 hover:border-teal/40 hover:text-teal-600"
-              }`}
-            >
-              🔗 Add by URL
-            </button>
-            <button
-              onClick={() => setBinOpen((v) => !v)}
-              aria-expanded={binOpen}
-              className={`shrink-0 rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-xs transition-all active:scale-[0.97] ${
-                binOpen
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-line bg-surface text-ink-700 hover:border-coral/50 hover:text-coral-600"
-              }`}
-            >
-              🗑 Bin
-            </button>
-          </div>
-
-          {showAddByUrl && (
-            <AddSheetBox
-              onAdded={() => {
-                setShowAddByUrl(false);
-                refetch();
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setLinkError(null);
               }}
+              placeholder="Search your sheets, or paste a Google Sheets link…"
+              aria-label="Search your sheets or paste a Google Sheets link"
+              className={`flex-1 rounded-lg border bg-surface px-3.5 py-2.5 text-sm shadow-card outline-hidden transition-shadow focus:ring-4 focus:ring-teal/10 ${
+                linkId ? "border-teal font-mono" : "border-line focus:border-teal"
+              }`}
             />
+            <button
+              type="submit"
+              disabled={resolving || !query.trim()}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink-700 shadow-xs transition-all hover:border-teal/40 hover:text-teal-600 active:scale-[0.97] disabled:opacity-50"
+            >
+              {resolving ? <Spinner /> : <Search className="h-4 w-4" />}
+              Search
+            </button>
+          </form>
+
+          {linkId && !linkError && (
+            <p className="font-mono text-xs text-teal-600">
+              Google Sheets link — press Search to look it up.
+            </p>
+          )}
+          {linkError && <p className="font-mono text-xs text-coral-600">{linkError}</p>}
+
+          {linkedSheet && (
+            <div className="space-y-2 rounded-2xl border border-teal/30 bg-teal-soft/40 p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-teal-600">
+                  found from your link
+                </span>
+                <button
+                  onClick={clearLinked}
+                  className="rounded-md px-2 py-1 font-mono text-[11px] text-ink-400 transition-colors hover:bg-paper hover:text-ink-700"
+                >
+                  ✕ dismiss
+                </button>
+              </div>
+              <AvailableSheets
+                available={[linkedSheet]}
+                loading={false}
+                error={null}
+                view={prefs.views.sheets}
+                onRefresh={refetch}
+                onChanged={() => {
+                  refetch();
+                  if (linkedId) syncLinkedStub(linkedId);
+                }}
+                label={linkedSheet.tracked ? "already tracked" : "not tracked yet"}
+              />
+            </div>
           )}
 
-          {!binOpen && (
           <div className="flex flex-wrap items-center gap-2">
             {chip(filter === "all", () => setFilter("all"), "All", available.length)}
             {chip(filter === "tracked", () => setFilter("tracked"), "Tracked", trackedCount)}
@@ -175,13 +267,9 @@ export default function SheetsTab() {
               ]}
             />
           </div>
-          )}
         </div>
       )}
 
-      {binOpen ? (
-        <DriveBin onChanged={refetch} />
-      ) : (
       <AvailableSheets
         available={filtered}
         loading={loading}
@@ -203,7 +291,6 @@ export default function SheetsTab() {
             : undefined
         }
       />
-      )}
     </div>
   );
 }

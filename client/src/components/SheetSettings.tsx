@@ -295,7 +295,7 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
                   <input
                     value={range}
                     onChange={(e) => setRange(e.target.value)}
-                    placeholder="B2:D50, E11, 5:5, or C:C"
+                    placeholder="B2:D50, G1:G9, 5:5, or C:C"
                     className={`${field} pr-10 font-mono`}
                   />
                   <PickFromSheetButton
@@ -306,7 +306,7 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
                   />
                 </div>
                 <p className="mt-1.5 font-mono text-[11px] text-ink-400">
-                  A1 notation · a block, one cell, a row, or a column
+                  A1 notation · one cell, a block, a row or a column — separate several with commas
                 </p>
               </div>
             )}

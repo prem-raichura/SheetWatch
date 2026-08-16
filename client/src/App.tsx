@@ -9,6 +9,7 @@ const SheetsTab = lazy(() => import("./routes/SheetsTab"));
 const TrackingTab = lazy(() => import("./routes/TrackingTab"));
 const ActivityTab = lazy(() => import("./routes/ActivityTab"));
 const CompareTab = lazy(() => import("./routes/CompareTab"));
+const BinTab = lazy(() => import("./routes/BinTab"));
 const SheetDetail = lazy(() => import("./routes/SheetDetail"));
 const SettingsLayout = lazy(() => import("./routes/settings/SettingsLayout"));
 const AppearancePage = lazy(() => import("./routes/settings/AppearancePage"));
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="/tracking" element={<TrackingTab />} />
               <Route path="/activity" element={<ActivityTab />} />
               <Route path="/compare" element={<CompareTab />} />
+              <Route path="/bin" element={<BinTab />} />
               <Route path="/history/:id" element={<SheetDetail />} />
               <Route path="/settings" element={<SettingsLayout />}>
                 <Route index element={<Navigate to="/settings/appearance" replace />} />

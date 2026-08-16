@@ -233,7 +233,7 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
     "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-hidden transition-shadow focus:border-teal focus:ring-4 focus:ring-teal/10";
 
   return (
-    <ModalShell onClose={onClose} label="Add a chart" maxWidth="max-w-lg">
+    <ModalShell onClose={onClose} label="Add a chart" maxWidth="max-w-xl">
       <div className="border-b border-line px-5 py-4">
         <h2 className="font-display text-lg font-bold text-ink-900">Chart from a range</h2>
         <p className="mt-0.5 text-xs text-ink-400">
@@ -277,66 +277,71 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
           </label>
           <input value={label} onChange={(e) => setLabel(e.target.value)} className={field} />
         </div>
-        <div className="flex justify-end">
-          <PickFromSheetButton
-            onClick={() => setPicking("range")}
-            disabled={!sheetId}
-            label="Choose the data from the sheet"
-          />
-        </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
               Range
             </label>
-            <input
-              value={range}
-              onChange={(e) => setRange(e.target.value)}
-              placeholder="A1:C30"
-              className={`${field} font-mono`}
-            />
+            <div className="relative">
+              <input
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                placeholder="A1:C30"
+                className={`${field} pr-10 font-mono`}
+              />
+              <PickFromSheetButton
+                onClick={() => setPicking("range")}
+                disabled={!sheetId}
+                label="Choose the data from the sheet"
+                size="xs"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
+              />
+            </div>
           </div>
           <div>
-            <div className="mb-1 flex items-center justify-between gap-1">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-400">
-                X column
-              </label>
+            <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
+              X column
+            </label>
+            <div className="relative">
+              <input
+                value={xColumn}
+                onChange={(e) => setXColumn(e.target.value)}
+                placeholder="A"
+                className={`${field} pr-10 font-mono`}
+              />
               <PickFromSheetButton
                 onClick={() => setPicking("xColumn")}
                 disabled={!sheetId}
                 label="Choose the X column from the sheet"
                 size="xs"
-                className="h-5 w-5"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
               />
             </div>
-            <input
-              value={xColumn}
-              onChange={(e) => setXColumn(e.target.value)}
-              placeholder="A"
-              className={`${field} font-mono`}
-            />
           </div>
           <div>
-            <div className="mb-1 flex items-center justify-between gap-1">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-400">
-                Data columns
-              </label>
+            <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
+              Data columns
+            </label>
+            <div className="relative">
+              <input
+                value={dataColumns}
+                onChange={(e) => setDataColumns(e.target.value)}
+                placeholder="B,C"
+                className={`${field} pr-10 font-mono`}
+              />
               <PickFromSheetButton
                 onClick={() => setPicking("dataColumns")}
                 disabled={!sheetId}
                 label="Choose the data columns from the sheet"
                 size="xs"
-                className="h-5 w-5"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
               />
             </div>
-            <input
-              value={dataColumns}
-              onChange={(e) => setDataColumns(e.target.value)}
-              placeholder="B,C"
-              className={`${field} font-mono`}
-            />
           </div>
         </div>
+        <p className="font-mono text-[11px] text-ink-400">
+          ▦ opens the sheet — pick the block first, then refine the columns.
+        </p>
         <label className="inline-flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
