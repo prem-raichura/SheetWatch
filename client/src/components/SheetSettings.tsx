@@ -4,9 +4,20 @@ import { api } from "../lib/api";
 import { useWebhooks } from "../hooks/useWebhooks";
 import Spinner from "./Spinner";
 import { DrawerShell } from "./Modal";
-import RangePickerModal from "./RangePickerModal";
+import SheetPicker from "./SheetPicker";
+import PickFromSheetButton from "./PickFromSheetButton";
 
 type UiMode = "whole" | "range" | "rows";
+
+// Which field the grid picker is currently open for. Conditions have no stable
+// id of their own, so they're addressed by their group's id plus their index —
+// safe because the picker is modal, so the array can't shift while it's open.
+type PickTarget =
+  | { field: "range" }
+  | { field: "scanRange" }
+  | { field: "matchColumn" }
+  | { field: "alertColumns" }
+  | { field: "condition"; groupId: string; index: number };
 
 interface Props {
   sheet: Sheet;
@@ -74,7 +85,7 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
   const [tabs, setTabs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [picking, setPicking] = useState<PickTarget | null>(null);
 
   useEffect(() => {
     api
@@ -266,7 +277,7 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
 
             <button
               type="button"
-              onClick={() => setPickerOpen(true)}
+              onClick={() => setPicking({ field: mode === "rows" ? "scanRange" : "range" })}
               className="mt-3 inline-flex items-center gap-2 rounded-lg border border-teal/40 bg-teal-soft px-3 py-2 text-xs font-semibold text-teal-600 transition-colors hover:bg-teal hover:text-primary-foreground"
             >
               ▦ Open sheet &amp; select a region
@@ -280,12 +291,20 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
 
             {mode === "range" && (
               <div className="mt-3">
-                <input
-                  value={range}
-                  onChange={(e) => setRange(e.target.value)}
-                  placeholder="B2:D50, E11, 5:5, or C:C"
-                  className={`${field} font-mono`}
-                />
+                <div className="relative">
+                  <input
+                    value={range}
+                    onChange={(e) => setRange(e.target.value)}
+                    placeholder="B2:D50, E11, 5:5, or C:C"
+                    className={`${field} pr-10 font-mono`}
+                  />
+                  <PickFromSheetButton
+                    onClick={() => setPicking({ field: "range" })}
+                    label="Choose a range from the sheet"
+                    size="xs"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                  />
+                </div>
                 <p className="mt-1.5 font-mono text-[11px] text-ink-400">
                   A1 notation · a block, one cell, a row, or a column
                 </p>
@@ -295,12 +314,20 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
             {mode === "rows" && (
               <div className="mt-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={matchColumn}
-                    onChange={(e) => setMatchColumn(e.target.value)}
-                    placeholder="Column (Status or C)"
-                    className={`${field}`}
-                  />
+                  <div className="relative">
+                    <input
+                      value={matchColumn}
+                      onChange={(e) => setMatchColumn(e.target.value)}
+                      placeholder="Column (Status or C)"
+                      className={`${field} pr-10`}
+                    />
+                    <PickFromSheetButton
+                      onClick={() => setPicking({ field: "matchColumn" })}
+                      label="Choose the column from the sheet"
+                      size="xs"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                    />
+                  </div>
                   <input
                     value={matchValue}
                     onChange={(e) => setMatchValue(e.target.value)}
@@ -308,12 +335,20 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
                     className={`${field}`}
                   />
                 </div>
-                <input
-                  value={scanRange}
-                  onChange={(e) => setScanRange(e.target.value)}
-                  placeholder="Scan range (A1:Z1000)"
-                  className={`${field} font-mono`}
-                />
+                <div className="relative">
+                  <input
+                    value={scanRange}
+                    onChange={(e) => setScanRange(e.target.value)}
+                    placeholder="Scan range (A1:Z1000)"
+                    className={`${field} pr-10 font-mono`}
+                  />
+                  <PickFromSheetButton
+                    onClick={() => setPicking({ field: "scanRange" })}
+                    label="Choose the scan range from the sheet"
+                    size="xs"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                  />
+                </div>
                 <p className="text-xs text-ink-400">
                   Watches only rows where{" "}
                   <span className="font-semibold text-ink-700">{matchColumn || "column"}</span> equals{" "}
@@ -325,7 +360,10 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-ink-500">Alert columns</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink-500">Alert columns</label>
+              <PickFromSheetButton onClick={() => setPicking({ field: "alertColumns" })} />
+            </div>
             <input
               value={alertColumns}
               onChange={(e) => setAlertColumns(e.target.value)}
@@ -374,7 +412,12 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
                           }
                           placeholder="Col"
                           aria-label="Condition column"
-                          className={`${field} w-16 font-mono uppercase`}
+                          className={`${field} w-14 font-mono uppercase`}
+                        />
+                        <PickFromSheetButton
+                          onClick={() => setPicking({ field: "condition", groupId: g.id, index: ci })}
+                          label="Choose the column from the sheet"
+                          size="xs"
                         />
                         <select
                           value={c.op}
@@ -542,19 +585,89 @@ export default function SheetSettings({ sheet, projects, onClose, onSaved }: Pro
           </button>
         </div>
 
-        {pickerOpen && (
-          <RangePickerModal
-            sheetId={sheet.id}
+        {picking?.field === "range" && (
+          <SheetPicker
+            select="range"
+            source={{ kind: "tracked", sheetId: sheet.id }}
             tab={tab || null}
-            onClose={() => setPickerOpen(false)}
+            initial={range}
+            onClose={() => setPicking(null)}
             onPick={(picked) => {
-              if (mode === "rows") {
-                setScanRange(picked);
-              } else {
-                setMode("range");
-                setRange(picked);
-              }
-              setPickerOpen(false);
+              setMode("range");
+              setRange(picked);
+              setPicking(null);
+            }}
+          />
+        )}
+
+        {picking?.field === "scanRange" && (
+          <SheetPicker
+            select="range"
+            source={{ kind: "tracked", sheetId: sheet.id }}
+            tab={tab || null}
+            initial={scanRange}
+            title="Select the rows to scan"
+            onClose={() => setPicking(null)}
+            onPick={(picked) => {
+              setScanRange(picked);
+              setPicking(null);
+            }}
+          />
+        )}
+
+        {picking?.field === "matchColumn" && (
+          // Header text where there is one: row-match columns resolve relative
+          // to the scan range on the server, so a bare letter can drift.
+          <SheetPicker
+            select="column"
+            preferHeaderText
+            source={{ kind: "tracked", sheetId: sheet.id }}
+            tab={tab || null}
+            initial={matchColumn}
+            title="Pick the column to match on"
+            onClose={() => setPicking(null)}
+            onPick={(picked) => {
+              setMatchColumn(picked);
+              setPicking(null);
+            }}
+          />
+        )}
+
+        {picking?.field === "alertColumns" && (
+          <SheetPicker
+            select="columns"
+            source={{ kind: "tracked", sheetId: sheet.id }}
+            tab={tab || null}
+            initial={alertColumns
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean)}
+            title="Pick the columns to alert on"
+            onClose={() => setPicking(null)}
+            onPick={(cols) => {
+              setAlertColumns(cols.join(", "));
+              setPicking(null);
+            }}
+          />
+        )}
+
+        {picking?.field === "condition" && (
+          <SheetPicker
+            select="column"
+            source={{ kind: "tracked", sheetId: sheet.id }}
+            tab={tab || null}
+            initial={
+              groups.find((g) => g.id === picking.groupId)?.conditions[picking.index]?.column ?? ""
+            }
+            title="Pick the condition's column"
+            onClose={() => setPicking(null)}
+            onPick={(picked) => {
+              const { groupId, index } = picking;
+              updateGroup(groupId, (x) => ({
+                ...x,
+                conditions: x.conditions.map((y, j) => (j === index ? { ...y, column: picked } : y)),
+              }));
+              setPicking(null);
             }}
           />
         )}

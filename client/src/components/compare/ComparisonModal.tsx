@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Table2 } from "lucide-react";
 import { ModalShell } from "../Modal";
 import { api } from "../../lib/api";
 import { indexToColumn as colLetter } from "../../lib/grid";
 import { SkeletonRows } from "../Skeleton";
-import ColumnPickerModal from "./ColumnPickerModal";
+import SheetPicker from "../SheetPicker";
+import PickFromSheetButton from "../PickFromSheetButton";
 import type { CompareGroup, DriveSheet } from "../../types";
 import type { NewGroup } from "../../hooks/useCompare";
 
@@ -40,7 +40,7 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
   const [keyColumn, setKeyColumn] = useState(group?.keyColumn ?? "");
   const [compareColumns, setCompareColumns] = useState(group?.compareColumns.join(", ") ?? "");
   const [headers, setHeaders] = useState<string[]>([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [picking, setPicking] = useState<null | "key" | "compare">(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Sheets added by pasting a link (not in the Drive list). Kept so a picked
@@ -274,8 +274,11 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold text-ink-500">
-              Key column <span className="font-normal text-ink-400">(optional — matches rows across sheets)</span>
+            <span className="mb-1 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-ink-500">
+                Key column <span className="font-normal text-ink-400">(optional — matches rows across sheets)</span>
+              </span>
+              <PickFromSheetButton onClick={() => setPicking("key")} disabled={!masterId} />
             </span>
             <input className={input} value={keyColumn} onChange={(e) => setKeyColumn(e.target.value)} placeholder="e.g. A — leave blank to match by row position" />
           </label>
@@ -283,14 +286,7 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
           <label className="block">
             <span className="mb-1 flex items-center justify-between">
               <span className="text-xs font-semibold text-ink-500">Columns to compare</span>
-              <button
-                type="button"
-                onClick={() => masterId && setPickerOpen(true)}
-                disabled={!masterId}
-                className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-600 transition-colors hover:border-teal/40 hover:text-teal-600 disabled:opacity-50"
-              >
-                <Table2 className="h-3 w-3" /> Choose from sheet
-              </button>
+              <PickFromSheetButton onClick={() => setPicking("compare")} disabled={!masterId} />
             </span>
             <input className={input} value={compareColumns} onChange={(e) => setCompareColumns(e.target.value)} placeholder="e.g. B, C, D" />
             {headers.length > 0 && (
@@ -326,17 +322,33 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
         </div>
       </div>
 
-      {pickerOpen && masterId && (
-        <ColumnPickerModal
-          spreadsheetId={masterId}
+      {picking === "key" && masterId && (
+        <SheetPicker
+          select="column"
+          source={{ kind: "raw", spreadsheetId: masterId }}
           tab={masterTab}
-          initialKey={keyColumn.trim() || null}
-          initialColumns={parsedColumns}
-          onClose={() => setPickerOpen(false)}
-          onPick={({ keyColumn: k, compareColumns: cols }) => {
-            setKeyColumn(k ?? "");
+          initial={keyColumn}
+          title="Pick the key column"
+          hint="Click the column whose values identify a row across sheets."
+          onClose={() => setPicking(null)}
+          onPick={(picked) => {
+            setKeyColumn(picked);
+            setPicking(null);
+          }}
+        />
+      )}
+
+      {picking === "compare" && masterId && (
+        <SheetPicker
+          select="columns"
+          source={{ kind: "raw", spreadsheetId: masterId }}
+          tab={masterTab}
+          initial={parsedColumns}
+          title="Pick the columns to compare"
+          onClose={() => setPicking(null)}
+          onPick={(cols) => {
             setCompareColumns(cols.join(", "));
-            setPickerOpen(false);
+            setPicking(null);
           }}
         />
       )}

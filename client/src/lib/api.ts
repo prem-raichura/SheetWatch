@@ -13,6 +13,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
+    // express-rate-limit answers with plain text, so parsing it as JSON would
+    // collapse a rate-limit into a generic "Request failed".
+    if (res.status === 429) {
+      throw new Error("Too many requests — give it a minute and try again.");
+    }
     const err = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error((err as { error?: string }).error ?? "Request failed");
   }

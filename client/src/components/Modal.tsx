@@ -1,18 +1,37 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { m } from "motion/react";
 import { useScrollLock } from "../hooks/useScrollLock";
 
 const SCRIM = "fixed inset-0 z-[100] flex bg-black/50 backdrop-blur-[3px]";
 
-// Lock body scroll (ref-counted, stack-safe) + close on Escape while mounted.
+// Mount order of every open shell. Escape only reaches the topmost one, so a
+// picker opened from inside a drawer closes itself and leaves the drawer up.
+const stack: symbol[] = [];
+
+// Lock body scroll (ref-counted, stack-safe) + close on Escape while topmost.
+// The token is pushed once per mount — callers usually pass an inline onClose,
+// so re-registering on every render would shuffle the stack order.
 function useModalEffects(onClose: () => void) {
   useScrollLock();
+  const latest = useRef(onClose);
+  latest.current = onClose;
+
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const token = Symbol("modal");
+    stack.push(token);
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || stack[stack.length - 1] !== token) return;
+      e.stopPropagation();
+      latest.current();
+    };
     window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener("keydown", h);
+      const i = stack.lastIndexOf(token);
+      if (i !== -1) stack.splice(i, 1);
+    };
+  }, []);
 }
 
 interface ShellProps {

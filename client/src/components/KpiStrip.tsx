@@ -22,6 +22,8 @@ import { useToast } from "./Toast";
 import { usePrefs } from "../providers/PrefsProvider";
 import ViewToggle from "./ViewToggle";
 import { ModalShell } from "./Modal";
+import SheetPicker from "./SheetPicker";
+import PickFromSheetButton from "./PickFromSheetButton";
 import Spinner from "./Spinner";
 import NumberTicker from "./magic/NumberTicker";
 
@@ -425,6 +427,9 @@ function AddKpiModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =>
   const [format, setFormat] = useState("number");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+
+  const selectedSheet = sheets.find((s) => s.id === sheetId);
 
   useEffect(() => {
     api
@@ -481,12 +486,21 @@ function AddKpiModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-ink-500">Cell</label>
-            <input
-              value={cell}
-              onChange={(e) => setCell(e.target.value)}
-              placeholder="B4"
-              className={`mt-1.5 ${field} font-mono uppercase`}
-            />
+            <div className="relative mt-1.5">
+              <input
+                value={cell}
+                onChange={(e) => setCell(e.target.value)}
+                placeholder="B4"
+                className={`${field} pr-10 font-mono uppercase`}
+              />
+              <PickFromSheetButton
+                onClick={() => setPicking(true)}
+                disabled={!sheetId}
+                label="Choose the cell from the sheet"
+                size="xs"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-ink-500">Format</label>
@@ -523,6 +537,23 @@ function AddKpiModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =>
           Cancel
         </button>
       </div>
+
+      {picking && selectedSheet && (
+        // KPI values are read out of the watched grid, so a cell outside the
+        // sheet's range would silently resolve to nothing.
+        <SheetPicker
+          select="cell"
+          source={{ kind: "tracked", sheetId: selectedSheet.id }}
+          tab={selectedSheet.tab}
+          initial={cell}
+          restrict={selectedSheet.range}
+          onClose={() => setPicking(false)}
+          onPick={(picked) => {
+            setCell(picked);
+            setPicking(false);
+          }}
+        />
+      )}
     </ModalShell>
   );
 }

@@ -16,9 +16,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { api } from "@/lib/api";
+import { columnToIndex, indexToColumn } from "@/lib/grid";
 import { Sheet } from "@/types";
 import { useToast } from "@/components/Toast";
 import { ModalShell } from "@/components/Modal";
+import SheetPicker from "@/components/SheetPicker";
+import PickFromSheetButton from "@/components/PickFromSheetButton";
 import Spinner from "@/components/Spinner";
 import { SkeletonChart } from "@/components/Skeleton";
 import type { ChartWidgetData } from "./ChartCard";
@@ -183,6 +186,9 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
   const [headerRow, setHeaderRow] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState<null | "range" | "xColumn" | "dataColumns">(null);
+
+  const selectedSheet = sheets.find((s) => s.id === sheetId);
 
   useEffect(() => {
     api
@@ -271,6 +277,13 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
           </label>
           <input value={label} onChange={(e) => setLabel(e.target.value)} className={field} />
         </div>
+        <div className="flex justify-end">
+          <PickFromSheetButton
+            onClick={() => setPicking("range")}
+            disabled={!sheetId}
+            label="Choose the data from the sheet"
+          />
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
@@ -284,9 +297,18 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
             />
           </div>
           <div>
-            <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
-              X column
-            </label>
+            <div className="mb-1 flex items-center justify-between gap-1">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-400">
+                X column
+              </label>
+              <PickFromSheetButton
+                onClick={() => setPicking("xColumn")}
+                disabled={!sheetId}
+                label="Choose the X column from the sheet"
+                size="xs"
+                className="h-5 w-5"
+              />
+            </div>
             <input
               value={xColumn}
               onChange={(e) => setXColumn(e.target.value)}
@@ -295,9 +317,18 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
             />
           </div>
           <div>
-            <label className="mb-1 block font-mono text-[11px] uppercase tracking-wider text-ink-400">
-              Data columns
-            </label>
+            <div className="mb-1 flex items-center justify-between gap-1">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-400">
+                Data columns
+              </label>
+              <PickFromSheetButton
+                onClick={() => setPicking("dataColumns")}
+                disabled={!sheetId}
+                label="Choose the data columns from the sheet"
+                size="xs"
+                className="h-5 w-5"
+              />
+            </div>
             <input
               value={dataColumns}
               onChange={(e) => setDataColumns(e.target.value)}
@@ -333,6 +364,78 @@ function AddChartModal({ onClose, onAdded }: { onClose: () => void; onAdded: () 
           Add chart
         </button>
       </div>
+
+      {picking === "range" && selectedSheet && (
+        // boundedRange, because both this form and the server's parseA1Range
+        // insist on two endpoints — "C:C" and "A1" are rejected.
+        <SheetPicker
+          select="boundedRange"
+          source={{ kind: "tracked", sheetId: selectedSheet.id }}
+          tab={selectedSheet.tab}
+          initial={range}
+          title="Select the chart's data"
+          onClose={() => setPicking(null)}
+          onPick={(picked) => {
+            setRange(picked);
+            // First column labels the points, the rest become series — only as
+            // a starting guess, and only when the user hasn't set them.
+            if (!xColumn.trim() && !dataColumns.trim()) {
+              const box = parseA1Range(picked);
+              if (box) {
+                setXColumn(indexToColumn(box.c1));
+                const rest: string[] = [];
+                for (let c = box.c1 + 1; c <= box.c2; c++) rest.push(indexToColumn(c));
+                setDataColumns(rest.join(", "));
+              }
+            }
+            setPicking(null);
+          }}
+        />
+      )}
+
+      {picking === "xColumn" && selectedSheet && (
+        <SheetPicker
+          select="column"
+          source={{ kind: "tracked", sheetId: selectedSheet.id }}
+          tab={selectedSheet.tab}
+          initial={xColumn}
+          restrict={range || undefined}
+          title="Pick the X column"
+          onClose={() => setPicking(null)}
+          onPick={(picked) => {
+            setXColumn(picked);
+            setPicking(null);
+          }}
+        />
+      )}
+
+      {picking === "dataColumns" && selectedSheet && (
+        <SheetPicker
+          select="columns"
+          source={{ kind: "tracked", sheetId: selectedSheet.id }}
+          tab={selectedSheet.tab}
+          initial={dataColumns
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean)}
+          restrict={range || undefined}
+          title="Pick the data columns"
+          onClose={() => setPicking(null)}
+          onPick={(cols) => {
+            setDataColumns(cols.join(", "));
+            setPicking(null);
+          }}
+        />
+      )}
     </ModalShell>
   );
+}
+
+// Zero-based column bounds of a bounded A1 range, or null.
+function parseA1Range(range: string): { c1: number; c2: number } | null {
+  const m = /^([A-Za-z]{1,3})\d+:([A-Za-z]{1,3})\d+$/.exec(range.trim());
+  if (!m) return null;
+  const a = columnToIndex(m[1]);
+  const b = columnToIndex(m[2]);
+  return { c1: Math.min(a, b), c2: Math.max(a, b) };
 }
