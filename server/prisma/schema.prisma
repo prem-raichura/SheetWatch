@@ -251,6 +251,7 @@ model ComparisonGroup {
   keyColumn           String? // header name or A1 letters; null = match by row position
   compareColumns      String[] @default([]) // headers or A1 letters to compare
   enabled             Boolean  @default(true)
+  checkInterval       Int      @default(180) // seconds between background checks (60/180/300/600)
   lastCheckedAt       DateTime? // when the sweep/recompute last read the sheets
   createdAt           DateTime @default(now())
 

@@ -1,6 +1,6 @@
 // This process *is* the BullMQ backend, so it declares the mode itself rather
 // than trusting the environment to say so. Without this, a .env missing
-// WORKER_MODE would leave every scheduleSheetPoll/scheduleCompareSweep call a
+// WORKER_MODE would leave every scheduleSheetPoll/scheduleIntegrityCheck call a
 // no-op and the worker would sit idle with nothing to drain — silently.
 process.env.WORKER_MODE = "bullmq";
 
@@ -8,8 +8,7 @@ import "../shared/env";
 import { createPollWorker } from "./pollWorker";
 import { createNotifyWorker } from "./notifyWorker";
 import { createCompareWorker } from "./compareWorker";
-import { ensureAllSheetJobs } from "./scheduler";
-import { scheduleCompareSweep } from "../shared/queues";
+import { ensureAllIntegrityJobs, ensureAllSheetJobs } from "./scheduler";
 import { sendDueDigests } from "../shared/digest";
 import { pruneSnapshots } from "../shared/snapshots";
 import { flushQueuedNotifications } from "../shared/notify/dispatch";
@@ -34,7 +33,9 @@ compareWorker.on("failed", (job, err) => {
 ensureAllSheetJobs()
   .then((r) => console.log(`Scheduled ${r.active} sheet poll job(s)`))
   .catch(console.error);
-scheduleCompareSweep().catch(console.error);
+ensureAllIntegrityJobs()
+  .then((r) => console.log(`Scheduled ${r.active} integrity check job(s)`))
+  .catch(console.error);
 
 // The API is on Vercel with WORKER_MODE unset, so it cannot schedule anything
 // itself — it has no Redis connection at all. Everything the UI does to a
@@ -53,6 +54,17 @@ setInterval(() => {
       }
     })
     .catch((err) => console.error("Sheet job reconcile failed:", err?.message ?? err));
+
+  ensureAllIntegrityJobs()
+    .then((r) => {
+      if (r.added || r.retimed || r.removed) {
+        console.log(
+          `Integrity jobs reconciled: ${r.active} active ` +
+            `(+${r.added} new, ~${r.retimed} retimed, -${r.removed} stale)`
+        );
+      }
+    })
+    .catch((err) => console.error("Integrity job reconcile failed:", err?.message ?? err));
 }, RECONCILE_MS);
 
 // Digest + snapshot retention + quiet-hours flush + scheduled reports. Same
@@ -66,4 +78,4 @@ setInterval(() => {
   sendDueReports().catch((err) => console.error("Report run failed:", err?.message ?? err));
 }, 5 * 60 * 1000);
 
-console.log("Worker started — poll + notify + compare workers running");
+console.log("Worker started — poll + notify + integrity workers running");

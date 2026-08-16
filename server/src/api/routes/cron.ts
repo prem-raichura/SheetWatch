@@ -15,13 +15,15 @@ import { recomputeAllGroups } from "../../shared/compare";
 // Deliberately split into two endpoints on independent schedules:
 //
 //   /poll        — sheets only. Parallel, short, safe to run every minute.
-//   /maintenance — digests, reports, snapshot prune, quiet-hours flush and the
-//                  compare sweep. recomputeAllGroups() is sequential and does
-//                  live Google reads per target, so it's the slowest thing here
-//                  by far and must not share a time budget with polling.
+//   /integrity   — integrity checks that are due, on their own schedule for the
+//                  same reason sheets have one: they read Google live per
+//                  target, so they must not share a time budget with polling.
+//                  Run it every minute — that's the shortest cadence a check
+//                  can be set to, and each check only runs when it's due.
+//   /maintenance — digests, reports, snapshot prune, quiet-hours flush.
 //
-// BOTH must be scheduled. Pointing a single schedule at /poll silently leaves
-// digests, reports and cross-sheet suggestions dead. See DEPLOY.md.
+// ALL THREE must be scheduled. Pointing a single schedule at /poll silently
+// leaves digests, reports and integrity checks dead. See DEPLOY.md.
 //
 // Every route is mounted on GET and POST: QStash publishes with POST by
 // default, Vercel Cron and manual curl checks use GET.
@@ -133,17 +135,25 @@ const maintenanceHandler: RequestHandler = async (_req, res) => {
     console.error("Report run failed:", err?.message ?? err);
     return 0;
   });
-  // Catches target-only edits between polls — the no-BullMQ equivalent of the
-  // dedicated compare worker's repeatable sweep.
-  await recomputeAllGroups().catch((err) =>
-    console.error("Compare sweep failed:", err?.message ?? err)
-  );
 
   res.json({ digests, flushed, reports });
 };
 
+// Integrity checks — the no-BullMQ equivalent of the per-check repeatable jobs
+// (`integrity:{groupId}`). recomputeAllGroups() runs only the checks whose own
+// interval is up, so calling this every minute honours a "1 min" setting
+// without re-reading every sheet on every tick.
+const integrityHandler: RequestHandler = async (_req, res) => {
+  await recomputeAllGroups().catch((err) =>
+    console.error("Integrity run failed:", err?.message ?? err)
+  );
+  res.json({ ok: true });
+};
+
 router.get("/poll", pollHandler);
 router.post("/poll", pollHandler);
+router.get("/integrity", integrityHandler);
+router.post("/integrity", integrityHandler);
 router.get("/maintenance", maintenanceHandler);
 router.post("/maintenance", maintenanceHandler);
 

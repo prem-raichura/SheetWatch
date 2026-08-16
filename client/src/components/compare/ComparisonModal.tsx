@@ -6,7 +6,7 @@ import { SkeletonRows } from "../Skeleton";
 import SheetPicker from "../SheetPicker";
 import PickFromSheetButton from "../PickFromSheetButton";
 import type { CompareGroup, DriveSheet } from "../../types";
-import type { NewGroup } from "../../hooks/useCompare";
+import { CHECK_INTERVALS, type NewGroup } from "../../hooks/useCompare";
 
 interface Props {
   group?: CompareGroup | null; // present = edit
@@ -39,6 +39,7 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
   );
   const [keyColumn, setKeyColumn] = useState(group?.keyColumn ?? "");
   const [compareColumns, setCompareColumns] = useState(group?.compareColumns.join(", ") ?? "");
+  const [checkInterval, setCheckInterval] = useState(group?.checkInterval ?? 180);
   const [headers, setHeaders] = useState<string[]>([]);
   const [picking, setPicking] = useState<null | "key" | "compare">(null);
   const [saving, setSaving] = useState(false);
@@ -175,6 +176,7 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
         targets: targets.map((id) => ({ spreadsheetId: id, tab: null })),
         keyColumn: keyColumn.trim() || null,
         compareColumns: parsedColumns,
+        checkInterval,
       });
       onClose();
     } catch (e) {
@@ -304,6 +306,29 @@ export default function ComparisonModal({ group, onClose, onSave }: Props) {
               </div>
             )}
           </label>
+
+          <div>
+            <span className="mb-1 block text-xs font-semibold text-ink-500">
+              Check every{" "}
+              <span className="font-normal text-ink-400">— how often this runs in the background</span>
+            </span>
+            <div className="flex gap-1 rounded-xl border border-line bg-paper p-1">
+              {CHECK_INTERVALS.map((i) => (
+                <button
+                  key={i.value}
+                  type="button"
+                  onClick={() => setCheckInterval(i.value)}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    checkInterval === i.value
+                      ? "bg-foreground text-background shadow-xs"
+                      : "text-ink-500 hover:text-ink-900"
+                  }`}
+                >
+                  {i.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {err && <p className="text-sm font-medium text-coral-600">{err}</p>}
         </div>

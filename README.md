@@ -154,13 +154,16 @@ Short version — serving on Vercel, recurring work on a small VM:
 
 - **client** + **API** → two Vercel projects (the client proxies `/api`, `/auth`, `/public` to the API so the session cookie stays first-party and iOS Safari works)
 - **Postgres** → Neon (pooled URL for the API, direct URL for the worker and migrations)
-- **worker + Redis** → one `docker compose up` on a Hetzner VM. Runs the poll/notify/compare workers, so `pollInterval` is honoured exactly, with no function time limit
+- **worker + Redis** → one `docker compose up` on a Hetzner VM. Runs the poll/notify/integrity workers, so `pollInterval` and each integrity check's interval are honoured exactly, with no function time limit
 - **realtime** → Cloudflare Worker in `realtime/`, optional
 
 The Vercel API serves HTTP only — it never opens a Redis connection. The worker
 re-derives its schedules from the database every 60s, so sheets added or paused
 in the UI reach BullMQ without the API touching Redis.
 
-Don't want a VM? `/api/cron/poll` and `/api/cron/maintenance` run the same work
-from any external scheduler (QStash, cron-job.org, a crontab) — see
-*Alternative: no VM* in DEPLOY.md.
+Don't want a VM? `/api/cron/poll`, `/api/cron/integrity` and
+`/api/cron/maintenance` run the same work from any external scheduler (QStash,
+cron-job.org, a crontab) — see *Alternative: no VM* in DEPLOY.md. All three
+need a schedule: `/poll` and `/integrity` every minute (each sheet and each
+integrity check only runs when its own interval is up), `/maintenance` every
+few minutes.

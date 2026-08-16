@@ -2,7 +2,13 @@ import { Router } from "express";
 import prisma from "../../shared/prisma";
 import { requireAuth } from "../middleware/requireAuth";
 import { rateLimit } from "../middleware/rateLimit";
-import { computeSuggestions, applySuggestions } from "../../shared/compare";
+import {
+  computeSuggestions,
+  applySuggestions,
+  isCheckInterval,
+  CHECK_INTERVALS,
+} from "../../shared/compare";
+import { scheduleIntegrityCheck, unscheduleIntegrityCheck } from "../../shared/queues";
 import { oauthClientFor } from "../../shared/google/oauthClient";
 import {
   extractSpreadsheetId,
@@ -229,6 +235,7 @@ router.get("/groups", requireAuth, async (req, res) => {
       id: g.id,
       name: g.name,
       enabled: g.enabled,
+      checkInterval: g.checkInterval,
       keyColumn: g.keyColumn,
       compareColumns: g.compareColumns,
       master: {
@@ -255,12 +262,13 @@ router.get("/groups", requireAuth, async (req, res) => {
 // POST /api/compare/groups — create a comparison group from picked sheets.
 router.post("/groups", requireAuth, async (req, res) => {
   const userId = req.session!.userId as string;
-  const { name, master, targets, keyColumn, compareColumns } = req.body as {
+  const { name, master, targets, keyColumn, compareColumns, checkInterval } = req.body as {
     name?: unknown;
     master?: unknown;
     targets?: unknown;
     keyColumn?: unknown;
     compareColumns?: unknown;
+    checkInterval?: unknown;
   };
 
   if (typeof name !== "string" || !name.trim() || name.trim().length > 80) {
@@ -290,6 +298,10 @@ router.post("/groups", requireAuth, async (req, res) => {
     res.status(400).json({ error: "keyColumn must be a string or null" });
     return;
   }
+  if (checkInterval !== undefined && !isCheckInterval(checkInterval)) {
+    res.status(400).json({ error: `checkInterval must be one of ${CHECK_INTERVALS.join(", ")}` });
+    return;
+  }
 
   try {
     const auth = await authFor(userId);
@@ -308,6 +320,7 @@ router.post("/groups", requireAuth, async (req, res) => {
         masterLabel: masterResolved.label,
         keyColumn: typeof keyColumn === "string" && keyColumn.trim() ? keyColumn.trim() : null,
         compareColumns: cols,
+        ...(isCheckInterval(checkInterval) && { checkInterval }),
         targets: {
           create: targetsResolved.map((t) => ({
             spreadsheetId: t.input.spreadsheetId,
@@ -318,6 +331,7 @@ router.post("/groups", requireAuth, async (req, res) => {
         },
       },
     });
+    await scheduleIntegrityCheck(group);
     await computeSuggestions(group.id).catch(() => {});
     res.status(201).json({ id: group.id });
   } catch (err: any) {
@@ -348,12 +362,13 @@ router.patch("/groups/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Group not found" });
     return;
   }
-  const { name, enabled, keyColumn, compareColumns, targets } = req.body as {
+  const { name, enabled, keyColumn, compareColumns, targets, checkInterval } = req.body as {
     name?: unknown;
     enabled?: unknown;
     keyColumn?: unknown;
     compareColumns?: unknown;
     targets?: unknown;
+    checkInterval?: unknown;
   };
 
   const data: Record<string, unknown> = {};
@@ -385,6 +400,13 @@ router.patch("/groups/:id", requireAuth, async (req, res) => {
       return;
     }
     data.compareColumns = cols;
+  }
+  if (checkInterval !== undefined) {
+    if (!isCheckInterval(checkInterval)) {
+      res.status(400).json({ error: `checkInterval must be one of ${CHECK_INTERVALS.join(", ")}` });
+      return;
+    }
+    data.checkInterval = checkInterval;
   }
 
   let newTargets:
@@ -434,7 +456,11 @@ router.patch("/groups/:id", requireAuth, async (req, res) => {
       data: newTargets.map((t) => ({ groupId: group.id, ...t })),
     });
   }
-  await prisma.comparisonGroup.update({ where: { id: group.id }, data });
+  const updated = await prisma.comparisonGroup.update({ where: { id: group.id }, data });
+  // Re-time (or drop) the repeatable job the same way a sheet's poll interval
+  // is re-timed when it changes.
+  if (updated.enabled) await scheduleIntegrityCheck(updated);
+  else await unscheduleIntegrityCheck(updated.id);
   await computeSuggestions(group.id).catch(() => {});
   res.json({ ok: true });
 });
@@ -448,6 +474,7 @@ router.delete("/groups/:id", requireAuth, async (req, res) => {
     return;
   }
   await prisma.comparisonGroup.delete({ where: { id: group.id } });
+  await unscheduleIntegrityCheck(group.id);
   res.json({ ok: true });
 });
 

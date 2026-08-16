@@ -27,6 +27,8 @@ export interface CompareGroup {
   id: string;
   name: string;
   enabled: boolean;
+  /** Seconds between background checks: 60, 180, 300 or 600. */
+  checkInterval: number;
   keyColumn: string | null;
   compareColumns: string[];
   master: CompareSheetRef;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GitCompareArrows, Plus, Play, AlertTriangle, Trash2, Pencil, ExternalLink, Check } from "lucide-react";
-import { useCompare, fetchSuggestions } from "../hooks/useCompare";
+import { useCompare, fetchSuggestions, intervalLabel } from "../hooks/useCompare";
 import { API_BASE } from "../lib/api";
 import ComparisonModal from "../components/compare/ComparisonModal";
 import ComparisonList from "../components/compare/ComparisonList";
@@ -263,7 +263,7 @@ export default function CompareTab() {
                     </div>
                     <p className="mt-2 flex items-center gap-1.5 text-[11px] text-ink-400">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal" />
-                      Auto-checks every 2 min
+                      Auto-checks every {intervalLabel(selected.checkInterval)}
                       {selected.lastCheckedAt
                         ? ` · checked ${ago(selected.lastCheckedAt, nowTs)}`
                         : " · not checked yet"}

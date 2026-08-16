@@ -1,16 +1,20 @@
 import { Worker } from "bullmq";
 import { getConnection } from "../shared/redis";
-import { recomputeAllGroups } from "../shared/compare";
+import { computeSuggestions, recomputeAllGroups } from "../shared/compare";
 
-// Dedicated worker for the comparison feature: the repeatable `compare:sweep`
-// job periodically re-diffs every enabled group, surfacing (and notifying on)
-// new suggestions even when neither sheet was polled in between.
+// Dedicated worker for integrity checks. Each check has its own repeatable job
+// (`integrity:{groupId}`) firing at the interval that check is set to, exactly
+// like a tracked sheet's poll job. A job with no groupId is the legacy
+// `compare:sweep` — handled so a scheduler left over from an older deploy
+// still does something sensible until the reconcile drops it.
 export function createCompareWorker() {
   return new Worker(
     "compare",
-    async () => {
-      await recomputeAllGroups();
+    async (job) => {
+      const groupId = (job.data as { groupId?: string } | undefined)?.groupId;
+      if (groupId) await computeSuggestions(groupId, { notify: true });
+      else await recomputeAllGroups();
     },
-    { connection: getConnection(), concurrency: 1 }
+    { connection: getConnection(), concurrency: 2 }
   );
 }

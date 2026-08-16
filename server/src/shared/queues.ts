@@ -30,18 +30,28 @@ export const pollQueue = () => queues().poll;
 export const notifyQueue = () => queues().notify;
 export const compareQueue = () => queues().compare;
 
-// Periodic sweep that recomputes every comparison group — catches target-only
-// edits between polls. Single repeatable job keyed `compare:sweep`.
-// (Serverless equivalent: recomputeAllGroups() at the end of /api/cron/poll.)
-const COMPARE_SWEEP_MS = 120 * 1000;
-export async function scheduleCompareSweep(): Promise<void> {
+// Integrity checks are scheduled exactly like tracked sheets: one repeatable
+// job per check, keyed `integrity:{groupId}`, running at that check's own
+// interval. Routes and the worker's reconcile both go through these so the
+// key/interval/payload never drift.
+// (Serverless equivalent: /api/cron/integrity, which runs the due checks.)
+export async function scheduleIntegrityCheck(group: {
+  id: string;
+  checkInterval: number;
+}): Promise<void> {
   if (!bullmqEnabled()) return;
   await compareQueue().upsertJobScheduler(
-    "compare:sweep",
-    { every: COMPARE_SWEEP_MS },
-    { name: "sweep", data: {} }
+    `integrity:${group.id}`,
+    { every: group.checkInterval * 1000 },
+    { name: "check", data: { groupId: group.id } }
   );
 }
+
+export async function unscheduleIntegrityCheck(groupId: string): Promise<void> {
+  if (!bullmqEnabled()) return;
+  await compareQueue().removeJobScheduler(`integrity:${groupId}`).catch(() => {});
+}
+
 
 // Single source for the repeatable poll job keyed `poll:{sheetId}` —
 // sheets routes, bulk project actions, and the worker scheduler all

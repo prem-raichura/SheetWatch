@@ -16,6 +16,23 @@ export interface NewGroup {
   targets: SheetPick[];
   keyColumn: string | null;
   compareColumns: string[];
+  checkInterval: number;
+}
+
+// Background cadences offered in the UI, in seconds. Mirrors CHECK_INTERVALS
+// on the server, which rejects anything else.
+export const CHECK_INTERVALS: { value: number; label: string }[] = [
+  { value: 60, label: "1 min" },
+  { value: 180, label: "3 min" },
+  { value: 300, label: "5 min" },
+  { value: 600, label: "10 min" },
+];
+
+export function intervalLabel(seconds: number): string {
+  return (
+    CHECK_INTERVALS.find((i) => i.value === seconds)?.label ??
+    `${Math.round(seconds / 60)} min`
+  );
 }
 
 export interface ApplyResult {
