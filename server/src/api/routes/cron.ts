@@ -7,6 +7,8 @@ import { pruneSnapshots } from "../../shared/snapshots";
 import { flushQueuedNotifications } from "../../shared/notify/dispatch";
 import { sendDueReports } from "../../shared/reports";
 import { recomputeAllGroups } from "../../shared/compare";
+import { recordOps, pruneOps, type OpsSource, type OpsStatus } from "../../shared/ops";
+import { rollupOps, pruneRollups } from "../../shared/opsRollup";
 
 // Scheduler entry points — together these replace the BullMQ worker in the
 // serverless deployment. Upstash QStash (or Vercel Cron) calls them on a fixed
@@ -35,6 +37,28 @@ function authorized(header: string | undefined, secret: string): boolean {
   const expected = Buffer.from(`Bearer ${secret}`);
   const got = Buffer.from(header ?? "");
   return got.length === expected.length && timingSafeEqual(got, expected);
+}
+
+// Every cron run leaves a record, so the ops dashboard can tell "the scheduler
+// is healthy" from "nothing has called this endpoint in an hour". Best-effort:
+// recordOps never rejects, and a telemetry write must not fail the run.
+async function withRecord(
+  source: OpsSource,
+  run: () => Promise<Record<string, unknown>>
+): Promise<Record<string, unknown>> {
+  const started = Date.now();
+  let status: OpsStatus = "ok";
+  let data: Record<string, unknown> = {};
+  try {
+    data = await run();
+    return data;
+  } catch (err) {
+    status = "error";
+    data = { error: (err as Error)?.message ?? String(err) };
+    throw err;
+  } finally {
+    await recordOps({ source, status, durationMs: Date.now() - started, data });
+  }
 }
 
 const requireCronAuth: RequestHandler = (req, res, next) => {
@@ -75,6 +99,15 @@ async function claimSheet(id: string, lastCheckedAt: Date | null): Promise<boole
 // notify inline. Sheets are polled in parallel; the per-sheet work is one
 // Google read plus a diff, so this stays well inside the function budget.
 const pollHandler: RequestHandler = async (_req, res) => {
+  try {
+    res.json(await withRecord("cron:poll", runPoll));
+  } catch (err) {
+    console.error("Cron poll failed:", (err as Error)?.message ?? err);
+    res.status(500).json({ error: "Poll run failed" });
+  }
+};
+
+async function runPoll(): Promise<Record<string, unknown>> {
   const sheets = await prisma.sheet.findMany({
     where: { paused: false, archivedAt: null },
     select: { id: true, pollInterval: true, lastCheckedAt: true },
@@ -105,7 +138,7 @@ const pollHandler: RequestHandler = async (_req, res) => {
   ).length;
   const failed = results.filter((r) => r.status === "rejected").length;
 
-  res.json({
+  return {
     due: due.length,
     checked: claimed.length,
     // Non-zero means another run was still going when this one started — a
@@ -113,13 +146,22 @@ const pollHandler: RequestHandler = async (_req, res) => {
     skipped: due.length - claimed.length,
     changed,
     failed,
-  });
-};
+  };
+}
 
 // Everything the worker's 5-minute setInterval owns, plus the compare sweep the
 // dedicated compare worker owns. Slow and mostly sequential — keep it on its
 // own, slacker schedule.
 const maintenanceHandler: RequestHandler = async (_req, res) => {
+  try {
+    res.json(await withRecord("cron:maintenance", runMaintenance));
+  } catch (err) {
+    console.error("Cron maintenance failed:", (err as Error)?.message ?? err);
+    res.status(500).json({ error: "Maintenance run failed" });
+  }
+};
+
+async function runMaintenance(): Promise<Record<string, unknown>> {
   const digests = await sendDueDigests().catch((err) => {
     console.error("Digest run failed:", err?.message ?? err);
     return 0;
@@ -136,18 +178,40 @@ const maintenanceHandler: RequestHandler = async (_req, res) => {
     return 0;
   });
 
-  res.json({ digests, flushed, reports });
-};
+  // Rollup first — pruneOps deletes the rows the rollup reads.
+  const rolled = await rollupOps().catch((err) => {
+    console.error("Ops rollup failed:", err?.message ?? err);
+    return 0;
+  });
+  const pruned = await pruneOps().catch((err) => {
+    console.error("Ops prune failed:", err?.message ?? err);
+    return 0;
+  });
+  await pruneRollups().catch((err) =>
+    console.error("Rollup prune failed:", err?.message ?? err)
+  );
+
+  return { digests, flushed, reports, rolled, pruned };
+}
 
 // Integrity checks — the no-BullMQ equivalent of the per-check repeatable jobs
 // (`integrity:{groupId}`). recomputeAllGroups() runs only the checks whose own
 // interval is up, so calling this every minute honours a "1 min" setting
 // without re-reading every sheet on every tick.
 const integrityHandler: RequestHandler = async (_req, res) => {
-  await recomputeAllGroups().catch((err) =>
-    console.error("Integrity run failed:", err?.message ?? err)
-  );
-  res.json({ ok: true });
+  try {
+    res.json(
+      await withRecord("cron:integrity", async () => {
+        await recomputeAllGroups();
+        return { ok: true };
+      })
+    );
+  } catch (err) {
+    // A 5xx is deliberate: the scheduler should retry, and a run that failed
+    // must not look successful on the dashboard.
+    console.error("Cron integrity failed:", (err as Error)?.message ?? err);
+    res.status(500).json({ error: "Integrity run failed" });
+  }
 };
 
 router.get("/poll", pollHandler);

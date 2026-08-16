@@ -32,12 +32,20 @@ services:
       redis:
         condition: service_healthy
     env_file: .env.production
+    # The worker drains in-flight jobs and writes a final "stopped" heartbeat on
+    # SIGTERM; its own hard cap is 15s, so give it room before docker SIGKILLs.
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
       WORKER_MODE: bullmq
       # Overrides whatever .env.production says — Redis lives on the compose
       # network under its service name, never on localhost or a public address.
       REDIS_URL: redis://redis:6379
+      # Surfaces on the ops dashboard so "which build is running?" is
+      # answerable, and so worker-vs-API version skew is visible:
+      #   GIT_COMMIT_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
+      # (`docker compose up -e …` is not a thing — -e belongs to `docker run`.)
+      GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-}
     logging:
       driver: json-file
       options:

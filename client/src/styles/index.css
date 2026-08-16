@@ -40,7 +40,11 @@
   --destructive-soft: color-mix(in oklab, var(--destructive) 10%, var(--card));
   --destructive-foreground: oklch(1 0 0);
   --success: var(--primary);
+  /* --warning is a FILL: 2.2:1 on white, so it may never carry text or meaning
+     on its own. Use --warning-strong for words, --warning-soft for bands. */
   --warning: oklch(0.75 0.15 80);
+  --warning-strong: oklch(0.58 0.13 80);
+  --warning-soft: color-mix(in oklab, var(--warning) 12%, var(--card));
 
   /* Charts */
   --chart-1: var(--primary);
@@ -48,6 +52,17 @@
   --chart-3: oklch(0.7 0.13 80);
   --chart-4: oklch(0.6 0.16 320);
   --chart-5: oklch(0.65 0.12 150);
+
+  /* Categorical series order — validated, not cosmetic. Declaration order is
+     NOT series order: chart-1 (teal) against chart-2 (blue) is normal-vision
+     ΔE 14.8, under the 15 floor, so adjacent series would be indistinguishable
+     even with full colour vision. This sequence passes light and dark.
+     Always index --series-N; never reach for --chart-N directly. */
+  --series-1: var(--chart-1); /* teal    */
+  --series-2: var(--chart-4); /* magenta */
+  --series-3: var(--chart-3); /* amber   */
+  --series-4: var(--chart-2); /* blue    */
+  --series-5: var(--chart-5); /* green   */
 
   --radius: 0.75rem;
   --shadow-card-value: 0 1px 2px rgb(20 26 42 / 0.04), 0 1px 12px rgb(20 26 42 / 0.04);
@@ -77,6 +92,19 @@
   --destructive: oklch(0.7 0.17 33);
   --destructive-strong: oklch(0.78 0.15 33);
   --destructive-soft: color-mix(in oklab, var(--destructive) 16%, var(--card));
+  --warning: oklch(0.78 0.14 80);
+  --warning-strong: oklch(0.84 0.13 80);
+  --warning-soft: color-mix(in oklab, var(--warning) 18%, var(--card));
+  /* Chart hues re-stepped for the dark surface rather than inherited: the dark
+     lightness band is L 0.48–0.67, and both the light amber (0.699) and the
+     dark --primary (0.72, chroma 0.099) fall outside it. chart-1 still follows
+     the user's accent hue — it is only clamped into the band, so a custom
+     accent still tints the charts. */
+  --chart-1: oklch(from var(--accent-base) clamp(0.5, calc(l + 0.04), 0.66) max(c, 0.12) h);
+  --chart-2: oklch(0.66 0.14 260);
+  --chart-3: oklch(0.66 0.13 80);
+  --chart-4: oklch(0.64 0.16 320);
+  --chart-5: oklch(0.66 0.12 150);
   --shadow-card-value: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 12px rgb(0 0 0 / 0.25);
   --shadow-pop-value: 0 8px 30px rgb(0 0 0 / 0.5);
 }
@@ -132,11 +160,18 @@ html[data-fontscale="lg"] {
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-warning-strong: var(--warning-strong);
+  --color-warning-soft: var(--warning-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-series-5: var(--series-5);
 
   /* LEGACY BRIDGE — keeps the pre-migration components compiling and makes
      them dark-mode + accent aware. Removed at the end of Phase 3. */

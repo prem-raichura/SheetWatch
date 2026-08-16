@@ -13,6 +13,7 @@ Allow: /icon.svg
 Allow: /icons/
 Allow: /manifest.json
 Disallow: /share/
+Disallow: /admin
 Disallow: /settings
 Disallow: /overview
 Disallow: /sheets
@@ -29,6 +30,7 @@ User-agent: GPTBot
 Allow: /privacy
 Allow: /terms
 Disallow: /share/
+Disallow: /admin
 Disallow: /api/
 Disallow: /auth/
 
@@ -36,20 +38,24 @@ User-agent: OAI-SearchBot
 Allow: /privacy
 Allow: /terms
 Disallow: /share/
+Disallow: /admin
 
 User-agent: ClaudeBot
 Allow: /privacy
 Allow: /terms
 Disallow: /share/
+Disallow: /admin
 
 User-agent: PerplexityBot
 Allow: /privacy
 Allow: /terms
 Disallow: /share/
+Disallow: /admin
 
 User-agent: Google-Extended
 Allow: /privacy
 Allow: /terms
 Disallow: /share/
+Disallow: /admin
 
 Sitemap: https://sheetwatch.vercel.app/sitemap.xml

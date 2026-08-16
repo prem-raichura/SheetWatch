@@ -161,6 +161,32 @@ The Vercel API serves HTTP only — it never opens a Redis connection. The worke
 re-derives its schedules from the database every 60s, so sheets added or paused
 in the UI reach BullMQ without the API touching Redis.
 
+### Ops dashboard
+
+`/admin` on the client deployment is an internal, read-only view of the whole
+system: which services are up, queue depth, how many sheets are due or overdue,
+integrity-check freshness, notification failures and scale counters. It is its
+own bundle — not a route in the app, not linked from the nav, `noindex` in
+robots.
+
+Access is a Google session **plus** an email allowlist: set `ADMIN_EMAILS` on
+the API deployment (comma-separated). Unset, every `/api/admin/*` request 404s.
+A non-listed account gets the same 404 as an unknown path, so the endpoint
+never confirms it exists.
+
+Both sides report the build they are running: the API reads
+`VERCEL_GIT_COMMIT_SHA` (injected by Vercel automatically), the worker reads
+`GIT_COMMIT_SHA` — pass it with
+`GIT_COMMIT_SHA=$(git rev-parse --short HEAD) docker compose up -d --build`. The
+dashboard flags a mismatch as *version skew*, which is expected for the minutes
+of a rolling deploy and suspicious after that.
+
+Queue depth and worker liveness come from `OpsHeartbeat` rows the worker writes
+every 30s, plus one row per `/api/cron/*` run — the API reads Postgres, never
+Redis. On the API deployment set `ADMIN_EXPECT_WORKER=true` when a worker is
+supposed to be running, otherwise a dead worker whose last beat has aged out of
+the 24h window is indistinguishable from a serverless install.
+
 Don't want a VM? `/api/cron/poll`, `/api/cron/integrity` and
 `/api/cron/maintenance` run the same work from any external scheduler (QStash,
 cron-job.org, a crontab) — see *Alternative: no VM* in DEPLOY.md. All three

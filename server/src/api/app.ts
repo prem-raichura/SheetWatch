@@ -20,6 +20,7 @@ import sharesRouter from "./routes/shares";
 import publicRouter from "./routes/public";
 import realtimeRouter from "./routes/realtime";
 import compareRouter from "./routes/compare";
+import adminRouter from "./routes/admin";
 
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
@@ -65,6 +66,7 @@ app.use("/api/reports", reportsRouter);
 app.use("/api/shares", sharesRouter);
 app.use("/api/realtime", realtimeRouter);
 app.use("/api/compare", compareRouter);
+app.use("/api/admin", adminRouter);
 app.use("/public", publicRouter);
 
 // Unmatched API paths → JSON 404 (not Express's HTML default).

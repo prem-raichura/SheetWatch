@@ -60,3 +60,42 @@ if (!process.env.CRON_SECRET) {
       "BullMQ worker process owns polling; a silent outage if nothing else does."
   );
 }
+
+// ADMIN_EMAILS gates the ops dashboard (/api/admin/*). Optional for the same
+// reason CRON_SECRET is: a deployment that never opens the dashboard doesn't
+// need it, and making it required would break every existing install and the
+// worker at boot. When it IS set it must be well-formed, because a malformed
+// entry is an auth question — validate loudly here rather than at request time.
+if (!process.env.ADMIN_EMAILS) {
+  console.warn(
+    "ADMIN_EMAILS is not set — the ops dashboard is disabled and every " +
+      "/api/admin request will 404."
+  );
+} else {
+  const entries = process.env.ADMIN_EMAILS.split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (entries.length === 0) {
+    throw new Error("ADMIN_EMAILS is set but empty — unset it instead");
+  }
+  for (const entry of entries) {
+    if (entry.includes("*")) {
+      throw new Error("ADMIN_EMAILS must be concrete addresses (no wildcards)");
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(entry)) {
+      throw new Error(`ADMIN_EMAILS contains an invalid address: ${entry}`);
+    }
+  }
+}
+
+// The running build, for the ops dashboard. VERCEL_GIT_COMMIT_SHA is injected
+// on every Vercel deployment with no configuration, so the API reports its
+// version for free; the worker gets GIT_COMMIT_SHA from docker-compose.
+export function apiVersion(): string | null {
+  return (
+    process.env.GIT_COMMIT_SHA ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    process.env.APP_VERSION ??
+    null
+  );
+}

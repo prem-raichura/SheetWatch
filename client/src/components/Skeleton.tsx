@@ -36,20 +36,32 @@ export function SkeletonStats() {
   );
 }
 
+const BAR_HEIGHTS = [36, 56, 24, 64, 40, 72, 48, 30, 60, 44, 68, 34];
+
 // Placeholder matching the ActivityChart card while overview data loads.
-export function SkeletonChart() {
-  const bars = [36, 56, 24, 64, 40, 72, 48];
+// `wide` fills the card (ops charts); the default keeps the original narrow
+// overview shape, so the existing call site is untouched.
+export function SkeletonChart({
+  count = 7,
+  wide = false,
+  className = "",
+}: {
+  count?: number;
+  wide?: boolean;
+  className?: string;
+} = {}) {
+  const bars = Array.from({ length: count }, (_, i) => BAR_HEIGHTS[i % BAR_HEIGHTS.length]);
   return (
-    <div className="rounded-2xl border border-line bg-surface px-5 py-4 shadow-card">
+    <div className={`rounded-2xl border border-line bg-surface px-5 py-4 shadow-card ${className}`}>
       <div className="flex items-center justify-between">
         <div className="h-3.5 w-24 animate-pulse rounded bg-line" />
         <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
       </div>
-      <div className="mt-3 flex h-[90px] w-full max-w-sm items-end gap-4">
+      <div className={`mt-3 flex h-[90px] w-full items-end gap-1.5 ${wide ? "" : "max-w-sm gap-4"}`}>
         {bars.map((h, i) => (
           <div
             key={i}
-            className="w-7 animate-pulse rounded-t bg-muted"
+            className={`animate-pulse rounded-t bg-muted ${wide ? "flex-1" : "w-7"}`}
             style={{ height: h }}
           />
         ))}

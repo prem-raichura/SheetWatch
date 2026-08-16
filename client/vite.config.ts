@@ -12,11 +12,16 @@ const spaFallbackToAppHtml = {
   configureServer(server: { middlewares: { use: (fn: unknown) => void } }) {
     server.middlewares.use(
       (req: { url?: string }, _res: unknown, next: () => void) => {
-        const url = req.url ?? "";
-        const isAsset = url.includes(".") || url.startsWith("/@") || url.startsWith("/src/");
+        // Strip the query string first — matching on the raw url only works
+        // while the sole test is "contains a dot".
+        const path = (req.url ?? "").split("?")[0];
+        const isAsset =
+          path.includes(".") || path.startsWith("/@") || path.startsWith("/src/");
+        // The ops dashboard is its own entry, not a route in the SPA.
+        if (path === "/admin" || path.startsWith("/admin/")) req.url = "/admin.html";
         // "/" stays on the landing page; every other extensionless route is a
         // client-side app route and must boot the SPA shell.
-        if (url !== "/" && !isAsset) req.url = "/app.html";
+        else if (path !== "/" && !isAsset) req.url = "/app.html";
         next();
       }
     );
@@ -35,6 +40,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         app: path.resolve(__dirname, "app.html"),
+        admin: path.resolve(__dirname, "admin.html"),
       },
     },
   },

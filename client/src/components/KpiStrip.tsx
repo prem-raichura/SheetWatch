@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { api } from "../lib/api";
+import { linearScale } from "../lib/scale";
 import { KpiWidget, Sheet } from "../types";
 import { useToast } from "./Toast";
 import { usePrefs } from "../providers/PrefsProvider";
@@ -30,18 +31,18 @@ import NumberTicker from "./magic/NumberTicker";
 function Sparkline({ series }: { series: (number | null)[] }) {
   const points = series.filter((v): v is number => v !== null);
   if (points.length < 2) return null;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const span = max - min || 1;
+
   const W = 96;
   const H = 28;
+  // Shared with the ops charts: zero-based, with headroom for a flat series so
+  // "perfectly stable" can't render as "collapsed to zero".
+  const scale = linearScale(points, H);
   const step = W / (points.length - 1);
-  const d = points
-    .map((v, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(H - ((v - min) / span) * H).toFixed(1)}`)
-    .join(" ");
+  const d = points.map((v, i) => `${i === 0 ? "M" : "L"}${i * step},${scale.y(v)}`).join(" ");
   const up = points[points.length - 1] >= points[0];
+
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible" aria-hidden>
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0" aria-hidden>
       <path d={d} fill="none" strokeWidth="1.5" className={up ? "stroke-teal" : "stroke-coral"} />
     </svg>
   );

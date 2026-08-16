@@ -104,6 +104,7 @@ model ChangeLog {
   createdAt DateTime  @default(now())
 
   @@index([sheetId, createdAt])
+  @@index([createdAt])
 }
 
 model PushSubscription {
@@ -237,6 +238,7 @@ model NotificationLog {
 
   @@index([userId, createdAt])
   @@index([status, deliverAfter])
+  @@index([createdAt])
 }
 
 model ComparisonGroup {
@@ -294,4 +296,51 @@ model Suggestion {
 
   @@unique([targetId, keyValue, column])
   @@index([groupId, status])
+}
+
+// Ops telemetry: one row per scheduler check-in, from either the BullMQ worker
+// (every 30s) or a /api/cron/* handler. The admin dashboard reads these instead
+// of talking to Redis, which the serverless API deliberately never does.
+// Pruned to 24h by the same maintenance pass that prunes snapshots.
+model OpsHeartbeat {
+  id         String   @id @default(cuid())
+  source     String // worker | cron:poll | cron:integrity | cron:maintenance
+  instance   String? // host:pid — worker only, so two workers don't look like one flapping
+  status     String   @default("ok") // ok | degraded | error | stopped
+  durationMs Int?
+  version    String? // GIT_COMMIT_SHA of the running build
+  data       Json // source-specific payload: queue counts, cron results…
+  createdAt  DateTime @default(now())
+
+  @@index([source, createdAt])
+  @@index([createdAt])
+}
+
+// Five-minute rollups of OpsHeartbeat, so the dashboard can chart a week while
+// raw beats stay on a 24h retention. Written by a pure recompute (never an
+// increment), so a maintenance pass that runs twice — or two racing writers —
+// converge on the same row. The bucket start IS the idempotency key.
+model OpsRollup {
+  bucketStart     DateTime @id // UTC 5-minute boundary
+  beats           Int      @default(0) // 0 = gap in coverage, not "queue was empty"
+  degraded        Int      @default(0)
+  redisOk         Int      @default(0)
+  redisAvgMs      Int?
+  redisMaxMs      Int?
+  rssMaxMb        Int?
+  queueMaxWaiting Int?
+  queueMaxFailed  Int?
+  checked         Int?
+  changed         Int?
+  failed          Int?
+  cronRuns        Int      @default(0)
+  cronErrors      Int      @default(0)
+  notifSent       Int?
+  notifFailed     Int?
+  notifQueued     Int?
+  version         String?
+  queues          Json? // per-queue depth from the last beat in the bucket
+  updatedAt       DateTime @updatedAt
+
+  @@index([bucketStart])
 }
