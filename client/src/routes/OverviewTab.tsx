@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Check, Eye, EyeOff, GripVertical, LayoutGrid } from "lucide-react";
+import { Activity, Check, Eye, EyeOff, GripVertical, LayoutGrid } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useOverview } from "../hooks/useOverview";
+import { getMe } from "../lib/auth";
 import { useChanges } from "../hooks/useChanges";
 import { usePrefs } from "../providers/PrefsProvider";
 import { DASHBOARD_SECTIONS } from "../lib/prefs";
@@ -55,6 +56,12 @@ function Stat({
 
 export default function OverviewTab() {
   const { overview, loading } = useOverview();
+  // Shown only to allowlisted accounts. /api/admin re-checks the allowlist on
+  // every request, so this flag is a signpost, not a permission.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    getMe().then((u) => setIsAdmin(Boolean(u?.isAdmin)));
+  }, []);
   const { changes, loading: recentLoading } = useChanges();
   const { prefs, update } = usePrefs();
   const [editing, setEditing] = useState(false);
@@ -180,6 +187,24 @@ export default function OverviewTab() {
           {editing ? "Done" : "Edit layout"}
         </button>
       </div>
+
+      {isAdmin && (
+        <a
+          href="/admin"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-teal/30 bg-teal-soft px-5 py-4 transition-colors hover:border-teal"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <Activity className="h-4 w-4 shrink-0 text-teal-600" />
+            <span className="min-w-0">
+              <span className="block font-display text-sm font-bold text-ink-900">Ops dashboard</span>
+              <span className="block truncate text-xs text-ink-500">
+                Services, queues, polling and delivery health for the whole system.
+              </span>
+            </span>
+          </span>
+          <span className="shrink-0 font-mono text-[11px] font-semibold text-teal-600">/admin →</span>
+        </a>
+      )}
 
       {!editing
         ? order.map((id) => {

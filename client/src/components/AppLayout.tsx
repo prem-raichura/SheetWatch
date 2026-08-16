@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { m } from "motion/react";
-import { Moon, Settings as SettingsIcon, Sun } from "lucide-react";
+import { Activity, Moon, Settings as SettingsIcon, Sun } from "lucide-react";
 import { useTheme } from "../providers/ThemeProvider";
 import { usePrefs } from "../providers/PrefsProvider";
 import { useRealtime } from "../providers/RealtimeProvider";
@@ -151,6 +151,19 @@ export default function AppLayout({ user }: Props) {
                 <PulseDot tone="muted" />
                 Enable push
               </button>
+            )}
+            {/* Ops dashboard — a plain anchor, not a NavLink: /admin is its own
+                bundle outside this router. Only rendered for allowlisted
+                accounts; the API re-checks on every request regardless. */}
+            {user.isAdmin && (
+              <a
+                href="/admin"
+                aria-label="Ops dashboard"
+                title="Ops dashboard"
+                className="rounded-lg border border-line bg-surface p-1.5 text-ink-400 shadow-xs transition-all hover:border-teal/40 hover:text-teal-600 active:scale-[0.97]"
+              >
+                <Activity className="h-4 w-4" />
+              </a>
             )}
             <NavLink
               to="/settings"

@@ -1,11 +1,33 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { gapRanges, linearScale, type Scale } from "../../lib/scale";
 
 // Chart frame for the ops dashboard. Imports React and local files only —
 // anything from components/ would drag motion (and with it ~85 KB) into a page
 // whose whole point is loading instantly when something is already broken.
 
-export const PLOT = { w: 720, h: 160, padL: 34, padR: 8, padT: 10, padB: 18 };
+// Pixel geometry, not viewBox units: the SVG is drawn at its measured width so
+// every chart is the SAME height whatever column it sits in. Aspect-ratio
+// scaling made a two-thirds card twice as tall as a one-third card, which is
+// what left those slabs of empty space beside the shorter ones.
+export const PLOT = { h: 190, padL: 38, padR: 10, padT: 12, padB: 20 };
+
+/** Container width, measured. Falls back to a sane default before first paint. */
+function useMeasuredWidth<T extends HTMLElement>(fallback = 720) {
+  const ref = useRef<T | null>(null);
+  const [width, setWidth] = useState(fallback);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const apply = () => setWidth(Math.max(240, Math.round(el.getBoundingClientRect().width)));
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width] as const;
+}
 
 export interface SeriesSpec {
   key: string;
@@ -49,8 +71,9 @@ export default function Chart({
   children,
 }: ChartProps) {
   const [hover, setHover] = useState<number | null>(null);
+  const [wrapRef, plotW] = useMeasuredWidth<HTMLDivElement>();
 
-  const innerW = PLOT.w - PLOT.padL - PLOT.padR;
+  const innerW = plotW - PLOT.padL - PLOT.padR;
   const innerH = height - PLOT.padT - PLOT.padB;
   const n = t.length;
 
@@ -117,11 +140,12 @@ export default function Chart({
   };
 
   return (
-    <div className="relative">
+    <div ref={wrapRef} className="relative">
       <svg
-        viewBox={`0 0 ${PLOT.w} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
-        className="w-full outline-hidden focus-visible:ring-2 focus-visible:ring-teal/40"
+        width={plotW}
+        height={height}
+        viewBox={`0 0 ${plotW} ${height}`}
+        className="block outline-hidden focus-visible:ring-2 focus-visible:ring-teal/40"
         role="img"
         aria-label={`${drawn.map((s) => s.label).join(", ")} over time`}
         tabIndex={0}
@@ -135,7 +159,7 @@ export default function Chart({
             <g key={i}>
               <line
                 x1={PLOT.padL}
-                x2={PLOT.w - PLOT.padR}
+                x2={plotW - PLOT.padR}
                 y1={y}
                 y2={y}
                 stroke="var(--border)"

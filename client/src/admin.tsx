@@ -655,7 +655,7 @@ function RedisLatency({ history }: { history: HistoryReport }) {
   const series = [{ key: "redis", label: "redis latency", color: SERIES[3], values: history.series.redisMs ?? [] }];
   return (
     <ChartCard title="Redis latency" hint="ms">
-      <Chart series={series} t={history.t} coverage={history.coverage} unit="ms" height={140}>
+      <Chart series={series} t={history.t} coverage={history.coverage} unit="ms">
         {(ctx) => <Lines ctx={ctx} series={series} area />}
       </Chart>
     </ChartCard>
@@ -666,7 +666,7 @@ function WorkerMemory({ history }: { history: HistoryReport }) {
   const series = [{ key: "rss", label: "worker memory", color: SERIES[4], values: history.series.rssMb ?? [] }];
   return (
     <ChartCard title="Worker memory" hint="MB">
-      <Chart series={series} t={history.t} coverage={history.coverage} unit="MB" height={140}>
+      <Chart series={series} t={history.t} coverage={history.coverage} unit="MB">
         {(ctx) => <Lines ctx={ctx} series={series} area />}
       </Chart>
     </ChartCard>
@@ -700,7 +700,7 @@ function Coverage({ history }: { history: HistoryReport }) {
         {/* "now", not the selected range — these are point-in-time shapes. */}
         <span className={label}>now</span>
       </div>
-      <div className="mt-3 grid gap-5 sm:grid-cols-3 xl:grid-cols-1">
+      <div className="mt-3 grid gap-x-8 gap-y-5 sm:grid-cols-3">
         <div>
           <div className={`${label} mb-2`}>poll interval</div>
           <MeterRows bins={pollInterval} color={SERIES[0]} />
@@ -874,12 +874,8 @@ function AdminApp() {
           </ChartCard>
         )}
 
-        <div className="grid items-start gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2">
-            {p && (p.deployment === "serverless" ? <Cron pulse={p} /> : <Queues pulse={p} />)}
-          </div>
-          {history.data && <Coverage history={history.data} />}
-        </div>
+        {p && (p.deployment === "serverless" ? <Cron pulse={p} /> : <Queues pulse={p} />)}
+        {history.data && <Coverage history={history.data} />}
 
         <div className="grid items-start gap-4 xl:grid-cols-3">
           <div className="xl:col-span-2">{stats.data && <Notifications stats={stats.data} />}</div>

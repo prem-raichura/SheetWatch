@@ -4,6 +4,7 @@ import { google } from "googleapis";
 import prisma from "../../shared/prisma";
 import { encrypt, decrypt } from "../../shared/crypto";
 import { requireAuth } from "../middleware/requireAuth";
+import { isAdminEmail } from "../middleware/requireAdmin";
 import { rateLimit } from "../middleware/rateLimit";
 
 const router = Router();
@@ -118,7 +119,10 @@ router.get("/me", requireAuth, async (req, res) => {
     res.status(401).json({ error: "User not found" });
     return;
   }
-  res.json(user);
+  // Lets the app show a link to the ops dashboard to the people who can open
+  // it. Not a permission in itself — /api/admin re-checks the allowlist on
+  // every request, so a forged flag buys nothing.
+  res.json({ ...user, isAdmin: isAdminEmail(user.email) });
 });
 
 router.patch("/me", requireAuth, async (req, res) => {

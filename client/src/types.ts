@@ -6,6 +6,7 @@ export interface User {
   digest?: "off" | "daily" | "weekly";
   digestHour?: number;
   sheetsWrite?: boolean; // granted the read-write Sheets scope
+  isAdmin?: boolean; // email is on ADMIN_EMAILS — shows the ops link, grants nothing
 }
 
 export interface CompareSheetRef {
