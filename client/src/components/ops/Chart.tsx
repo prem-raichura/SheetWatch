@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { gapRanges, linearScale, type Scale } from "../../lib/scale";
 
 // Chart frame for the ops dashboard. Imports React and local files only —
@@ -73,6 +73,33 @@ export default function Chart({
       </div>
     );
   }
+
+  const fallbackTable = useMemo(
+    () => (
+      <table>
+        <caption>{drawn.map((s) => s.label).join(", ")} by time</caption>
+        <thead>
+          <tr>
+            <th>time</th>
+            {drawn.map((s) => (
+              <th key={s.key}>{s.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {t.map((time, i) => (
+            <tr key={time}>
+              <td>{time}</td>
+              {drawn.map((s) => (
+                <td key={s.key}>{s.values[i] === null ? "no data" : s.values[i]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ),
+    [t, drawn]
+  );
 
   const move = (event: React.PointerEvent<SVGRectElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -223,28 +250,14 @@ export default function Chart({
         </p>
       )}
 
-      {/* The real accessible fallback: the numbers, not a description of them. */}
-      <table className="sr-only">
-        <caption>{drawn.map((s) => s.label).join(", ")} by time</caption>
-        <thead>
-          <tr>
-            <th>time</th>
-            {drawn.map((s) => (
-              <th key={s.key}>{s.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {t.map((time, i) => (
-            <tr key={time}>
-              <td>{time}</td>
-              {drawn.map((s) => (
-                <td key={s.key}>{s.values[i] === null ? "no data" : s.values[i]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* The real accessible fallback: the numbers, not a description of them.
+          The wrapper carries sr-only, not the table — `height: 1px` does not
+          constrain a display:table element, so an sr-only <table> stays its
+          full height and adds thousands of pixels of empty page scroll.
+          Memoised because the page re-renders every 5s for the live vitals and
+          this is hundreds of rows per chart. */}
+      <div className="sr-only">{fallbackTable}</div>
+
     </div>
   );
 }

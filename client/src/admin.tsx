@@ -855,14 +855,14 @@ function AdminApp() {
 
         {history.data ? (
           <>
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid items-start gap-4 xl:grid-cols-3">
               <div className="xl:col-span-2">
                 <Throughput history={history.data} />
               </div>
               <QueueDepth history={history.data} />
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid items-start gap-4 xl:grid-cols-3">
               <RedisLatency history={history.data} />
               <WorkerMemory history={history.data} />
               <Delivery history={history.data} />
@@ -874,14 +874,14 @@ function AdminApp() {
           </ChartCard>
         )}
 
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid items-start gap-4 xl:grid-cols-3">
           <div className="xl:col-span-2">
             {p && (p.deployment === "serverless" ? <Cron pulse={p} /> : <Queues pulse={p} />)}
           </div>
           {history.data && <Coverage history={history.data} />}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid items-start gap-4 xl:grid-cols-3">
           <div className="xl:col-span-2">{stats.data && <Notifications stats={stats.data} />}</div>
           {stats.data && <Integrity stats={stats.data} />}
         </div>
